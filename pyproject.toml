@@ -3,6 +3,10 @@
 [tool.ruff]
 target-version = "py312"
 line-length = 100
+# .astro/test_dag_integrity_default.py is an Astro-generated parse helper
+# ("USED BY DEV PARSE COMMAND DO NOT EDIT"); we commit it verbatim so
+# `astro dev start` works on a fresh clone, but it's not our code to lint.
+extend-exclude = [".astro"]
 
 [tool.ruff.lint]
 # pycodestyle, pyflakes, isort, warnings, pyupgrade, bugbear.
