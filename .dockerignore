@@ -1,0 +1,36 @@
+# The Astro base image copies the build context (`COPY . .` via ONBUILD).
+# Keep the image lean and keep secrets out. Do NOT ignore dags/, include/,
+# dbt/, tests/, requirements.txt or packages.txt — those belong in the image.
+
+.git
+.github
+.astro
+astro
+
+# Secrets / local env — never bake into the image
+.env
+.env.*
+airflow_settings.yaml
+
+# Local runtime artifacts
+logs/
+airflow.db
+airflow.cfg
+.venv
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Project meta not needed at runtime
+docs/
+private/
+.claude/
+README.md
+LICENSE
+.DS_Store
+
+# dbt runs in its own virtualenv (M4), not this image
+dbt-requirements.txt
