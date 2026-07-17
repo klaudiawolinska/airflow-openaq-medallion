@@ -5,6 +5,10 @@ on:
   push:
     branches: [main]
 
+# Least privilege: CI only reads the repo (never pushes back).
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -15,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -28,6 +34,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       # Building the image also validates that requirements.txt resolves on the
       # runtime's Python (3.14). Tests then run against the exact deployed image.
       - name: Build Astro runtime image

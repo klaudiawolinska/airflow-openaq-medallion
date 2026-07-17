@@ -1,7 +1,9 @@
 # Tooling config for the repo. Not a Python package (no [build-system]/[project]).
 
 [tool.ruff]
-target-version = "py312"
+# Match the Astro runtime interpreter (Python 3.14) so pyupgrade/syntax rules
+# target what actually runs — see Dockerfile / docs/adr/0017.
+target-version = "py314"
 line-length = 100
 # .astro/test_dag_integrity_default.py is an Astro-generated parse helper
 # ("USED BY DEV PARSE COMMAND DO NOT EDIT"); we commit it verbatim so
