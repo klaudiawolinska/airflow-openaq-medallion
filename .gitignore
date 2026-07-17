@@ -1,0 +1,35 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Astro / Airflow
+.astro/
+airflow_settings.yaml
+logs/
+airflow.db
+
+# dbt
+target/
+dbt_packages/
+**/target/
+**/dbt_packages/
+**/logs/
+
+# Editors / local tooling
+.idea/
+.vscode/
+.claude/settings.local.json
