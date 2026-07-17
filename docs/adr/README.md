@@ -20,3 +20,5 @@ Template: [0000-template.md](0000-template.md)
 | [0012](0012-astro-cli-only.md) | Local dev via the Astro CLI only | Accepted |
 | [0013](0013-no-deferrable-operator.md) | Deferrable operator out of scope | Accepted |
 | [0014](0014-testing-strategy.md) | Layered testing strategy (unit, dbt unit, data, integration) | Accepted |
+| [0015](0015-single-environment.md) | Single environment; no dev/prod separation or CD | Accepted |
+| [0016](0016-snowflake-rbac.md) | Basic Snowflake RBAC and provisioning | Accepted |

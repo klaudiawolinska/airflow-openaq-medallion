@@ -87,7 +87,7 @@
 | Reliability / recovery | Retries, backfill, partial success | retries + backoff, date parameterization, dynamic mapping |
 | Data quality | Data reaches gold only after audit | WAP gate = dbt tests (not_null, unique, accepted_range, freshness) |
 | Observability & alerting | Three complementary layers, native | custom Notifier, callbacks, Deadline Alerts; no external stack |
-| Security / secrets | Credentials outside code | `.env` / Secrets Backend; repo ships only `.env.example`; OpenAQ key as a secret |
+| Security / secrets | Credentials outside code; least-privilege Snowflake role | `.env` / Secrets Backend; repo ships only `.env.example`; OpenAQ key as a secret; basic Snowflake RBAC (see ADR-0016) |
 | Maintainability | Green CI required before merge | layered tests — Python unit, dbt unit + data tests, DAG-integrity (pytest), `dbt build`; lint; CodeRabbit on PRs (see ADR-0014) |
 | Cost / footprint | Low cost, small footprint | local start, public repo (CodeRabbit Pro free), XS warehouse with aggressive auto-suspend |
 | Scalability | Handles the Poland-wide hourly volume | dynamic mapping + incremental model |

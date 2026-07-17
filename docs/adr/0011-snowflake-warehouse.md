@@ -19,4 +19,4 @@ Use **Snowflake** with an **XS** warehouse and **aggressive auto-suspend** (60 s
 ## Consequences
 
 - Standard warehouse patterns (layers, MERGE, VARIANT) at minimal cost.
-- A separate CI database/schema is needed so `dbt build` in CI does not touch dev/prod ([ADR-0012](0012-astro-cli-only.md) context).
+- A separate CI schema is needed so `dbt build` in CI does not touch the pipeline's main tables (see [ADR-0016](0016-snowflake-rbac.md)).
