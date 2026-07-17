@@ -22,3 +22,4 @@ Template: [0000-template.md](0000-template.md)
 | [0014](0014-testing-strategy.md) | Layered testing strategy (unit, dbt unit, data, integration) | Accepted |
 | [0015](0015-single-environment.md) | Single environment; no dev/prod separation or CD | Accepted |
 | [0016](0016-snowflake-rbac.md) | Basic Snowflake RBAC and provisioning | Accepted |
+| [0017](0017-dbt-execution-mode.md) | dbt execution mode: LOCAL with a dedicated virtualenv | Accepted |
