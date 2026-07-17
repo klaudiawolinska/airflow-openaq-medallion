@@ -19,3 +19,4 @@ Template: [0000-template.md](0000-template.md)
 | [0011](0011-snowflake-warehouse.md) | Snowflake warehouse (XS, aggressive auto-suspend) | Accepted |
 | [0012](0012-astro-cli-only.md) | Local dev via the Astro CLI only | Accepted |
 | [0013](0013-no-deferrable-operator.md) | Deferrable operator out of scope | Accepted |
+| [0014](0014-testing-strategy.md) | Layered testing strategy (unit, dbt unit, data, integration) | Accepted |

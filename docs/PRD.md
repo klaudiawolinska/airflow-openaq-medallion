@@ -88,7 +88,7 @@
 | Data quality | Data reaches gold only after audit | WAP gate = dbt tests (not_null, unique, accepted_range, freshness) |
 | Observability & alerting | Three complementary layers, native | custom Notifier, callbacks, Deadline Alerts; no external stack |
 | Security / secrets | Credentials outside code | `.env` / Secrets Backend; repo ships only `.env.example`; OpenAQ key as a secret |
-| Maintainability | Green CI required before merge | lint + DAG-integrity tests (pytest) + `dbt build`; CodeRabbit on PRs |
+| Maintainability | Green CI required before merge | layered tests — Python unit, dbt unit + data tests, DAG-integrity (pytest), `dbt build`; lint; CodeRabbit on PRs (see ADR-0014) |
 | Cost / footprint | Low cost, small footprint | local start, public repo (CodeRabbit Pro free), XS warehouse with aggressive auto-suspend |
 | Scalability | Handles the Poland-wide hourly volume | dynamic mapping + incremental model |
 | Documentation | README + dbt docs + PRD | decision rationale, diagram, lineage |
