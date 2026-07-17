@@ -17,10 +17,17 @@ venv/
 !.env.example
 
 # Astro / Airflow
-.astro/
+# Commit .astro/config.yaml and the parse helper so `astro dev start` works on a
+# fresh clone; ignore only the local/volatile bits (Astro's own convention).
+.astro/standalone/
+.astro/*.local.yml
+.astro/*.local.yaml
 airflow_settings.yaml
+webserver_config.py
+airflow-webserver.pid
 logs/
 airflow.db
+airflow.cfg
 
 # dbt
 target/

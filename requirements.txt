@@ -1,0 +1,16 @@
+# Python dependencies installed into the Astro/Airflow image.
+#
+# Astro Runtime (3.3-2 = Apache Airflow 3.3.0) already ships Airflow core and
+# many providers: https://www.astronomer.io/docs/astro/runtime-image-architecture
+# Do NOT pin apache-airflow here — its version comes from the base image
+# (see Dockerfile / docs/adr/0001).
+#
+# dbt is intentionally absent: it runs in a dedicated virtualenv via Cosmos
+# ExecutionMode.LOCAL + dbt_executable_path (see dbt-requirements.txt and
+# docs/adr/0017), which isolates dbt's dependency tree from Airflow.
+
+# Snowflake connection + hooks (used from milestone M1).
+apache-airflow-providers-snowflake==6.14.0
+
+# dbt orchestration via Cosmos (used from milestone M4).
+astronomer-cosmos==1.15.0

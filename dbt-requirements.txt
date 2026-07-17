@@ -1,0 +1,15 @@
+# dbt runtime for Cosmos — installed into a dedicated virtualenv from M4
+# onward, NOT into the Airflow image. Cosmos runs it via ExecutionMode.LOCAL +
+# dbt_executable_path (see docs/adr/0017 and roadmap M4).
+#
+# Kept out of requirements.txt to isolate dbt's dependency tree from Airflow.
+# They share jinja2/pydantic/protobuf/click; those align today but co-installing
+# couples two independently-released tools over that shared surface, so a future
+# bump on either side could then break the other.
+#
+# Interpreter: the venv uses the runtime's Python 3.14 — no second interpreter.
+# dbt-core and dbt-snowflake 1.12 install and import cleanly on 3.14
+# (requires_python >=3.10; snowflake-connector-python supports 3.14). The
+# missing 3.14 classifier on dbt-snowflake is stale metadata, not a blocker.
+dbt-core==1.12.0
+dbt-snowflake==1.12.0

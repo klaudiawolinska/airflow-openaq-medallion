@@ -1,0 +1,15 @@
+# Tooling config for the repo. Not a Python package (no [build-system]/[project]).
+
+[tool.ruff]
+# Match the Astro runtime interpreter (Python 3.14) so pyupgrade/syntax rules
+# target what actually runs — see Dockerfile / docs/adr/0017.
+target-version = "py314"
+line-length = 100
+# .astro/test_dag_integrity_default.py is an Astro-generated parse helper
+# ("USED BY DEV PARSE COMMAND DO NOT EDIT"); we commit it verbatim so
+# `astro dev start` works on a fresh clone, but it's not our code to lint.
+extend-exclude = [".astro"]
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, isort, warnings, pyupgrade, bugbear.
+select = ["E", "F", "I", "W", "UP", "B"]
