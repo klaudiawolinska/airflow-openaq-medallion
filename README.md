@@ -84,7 +84,7 @@ The full decision log lives in [docs/adr/](docs/adr/). Highlights:
 
 ## Repo structure
 
-```
+```text
 airflow-openaq-medallion/
 ├── dags/
 │   ├── openaq_ingest.py          # bronze: incremental ingest (dynamic mapping)
@@ -117,16 +117,18 @@ airflow-openaq-medallion/
 
 ## Run
 
-**One-time Snowflake setup.** Provision the warehouse, database, medallion
-schemas, least-privilege roles, and key-pair service users by running the
-idempotent bootstrap scripts once as an admin — see
-[`include/sql/bootstrap/`](include/sql/bootstrap/README.md). This also generates
-the RSA key that `.env` points at (key-pair auth, [ADR-0018](docs/adr/0018-snowflake-key-pair-auth.md)).
-The pipeline then runs as the least-privilege role `OPENAQ_PIPELINE`, never
-`ACCOUNTADMIN`.
+**One-time Snowflake setup.** First generate an RSA key pair with `openssl` and
+paste the public half into `03_users.sql` — key-pair auth
+([ADR-0018](docs/adr/0018-snowflake-key-pair-auth.md)) is a prerequisite of the
+bootstrap, not a product of it. Then run the idempotent bootstrap scripts once as
+an admin to provision the warehouse, database, medallion schemas, least-privilege
+roles, and the key-pair service users. Both steps, with the exact commands, are
+in [`include/sql/bootstrap/`](include/sql/bootstrap/README.md). The pipeline then
+runs as the least-privilege role `OPENAQ_PIPELINE`, never `ACCOUNTADMIN`.
 
 ```bash
-cp .env.example .env      # fill in `account` + SMTP + OpenAQ; key path is preset
+cp .env.example .env      # `account` as <org>-<account>, + SMTP + OpenAQ;
+                          # the private-key path is already set
 astro dev start
 ```
 

@@ -56,7 +56,7 @@ Paste the public key from step 1 into the `RSA_PUBLIC_KEY` placeholder in
 `03_users.sql` first (the script fails on the placeholder by design). Then run,
 in order, in Snowsight or snowsql:
 
-```
+```text
 00_warehouse_database.sql   # warehouse, database, schemas
 01_roles.sql                # functional roles
 02_grants.sql               # least-privilege grants (+ future grants)
