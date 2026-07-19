@@ -84,7 +84,7 @@ The full decision log lives in [docs/adr/](docs/adr/). Highlights:
 
 ## Repo structure
 
-```
+```text
 airflow-openaq-medallion/
 ├── dags/
 │   ├── openaq_ingest.py          # bronze: incremental ingest (dynamic mapping)
@@ -98,7 +98,9 @@ airflow-openaq-medallion/
 │   ├── tests/                    # dbt tests = quality gate
 │   └── dbt_project.yml
 ├── include/
-│   ├── sql/                      # bronze DDL + load
+│   ├── sql/
+│   │   ├── bootstrap/            # idempotent Snowflake provisioning (RBAC + schemas)
+│   │   └── tests/               # negative-permission checks
 │   └── notifications/notifier.py # custom email BaseNotifier
 ├── tests/test_dag_integrity.py
 ├── docs/
@@ -115,12 +117,25 @@ airflow-openaq-medallion/
 
 ## Run
 
+**One-time Snowflake setup.** First generate an RSA key pair with `openssl` and
+paste the public half into `03_users.sql` — key-pair auth
+([ADR-0018](docs/adr/0018-snowflake-key-pair-auth.md)) is a prerequisite of the
+bootstrap, not a product of it. Then run the idempotent bootstrap scripts once as
+an admin to provision the warehouse, database, medallion schemas, least-privilege
+roles, and the key-pair service users. Both steps, with the exact commands, are
+in [`include/sql/bootstrap/`](include/sql/bootstrap/README.md). The pipeline then
+runs as the least-privilege role `OPENAQ_PIPELINE`, never `ACCOUNTADMIN`.
+
 ```bash
-cp .env.example .env      # fill in Snowflake + SMTP + OpenAQ credentials
+cp .env.example .env      # `account` as <org>-<account>, + SMTP + OpenAQ;
+                          # the private-key path is already set
 astro dev start
 ```
 
-The `openaq_ingest` DAG loads data into BRONZE and emits an Asset, which triggers `openaq_transform` (dbt via Cosmos) with the WAP gate before publishing to GOLD.
+Trigger the `_snowflake_smoke` DAG to confirm the connection (it logs the
+Snowflake version and `current_role=OPENAQ_PIPELINE`). Once ingest lands, the
+`openaq_ingest` DAG loads data into BRONZE and emits an Asset, which triggers
+`openaq_transform` (dbt via Cosmos) with the WAP gate before publishing to GOLD.
 
 ---
 
