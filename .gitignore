@@ -15,6 +15,8 @@ venv/
 .env
 .env.*
 !.env.example
+# Snowflake key-pair private keys (ADR-0018) — never commit
+include/.keys/
 
 # Astro / Airflow
 # Commit .astro/config.yaml and the parse helper so `astro dev start` works on a

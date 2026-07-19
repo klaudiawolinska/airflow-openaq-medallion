@@ -23,3 +23,4 @@ Template: [0000-template.md](0000-template.md)
 | [0015](0015-single-environment.md) | Single environment; no dev/prod separation or CD | Accepted |
 | [0016](0016-snowflake-rbac.md) | Basic Snowflake RBAC and provisioning | Accepted |
 | [0017](0017-dbt-execution-mode.md) | dbt execution mode: LOCAL with a dedicated virtualenv | Accepted |
+| [0018](0018-snowflake-key-pair-auth.md) | Snowflake key-pair auth for service accounts (TYPE=SERVICE) | Accepted |

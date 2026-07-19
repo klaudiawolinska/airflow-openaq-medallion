@@ -98,7 +98,9 @@ airflow-openaq-medallion/
 │   ├── tests/                    # dbt tests = quality gate
 │   └── dbt_project.yml
 ├── include/
-│   ├── sql/                      # bronze DDL + load
+│   ├── sql/
+│   │   ├── bootstrap/            # idempotent Snowflake provisioning (RBAC + schemas)
+│   │   └── tests/               # negative-permission checks
 │   └── notifications/notifier.py # custom email BaseNotifier
 ├── tests/test_dag_integrity.py
 ├── docs/
@@ -115,12 +117,23 @@ airflow-openaq-medallion/
 
 ## Run
 
+**One-time Snowflake setup.** Provision the warehouse, database, medallion
+schemas, least-privilege roles, and key-pair service users by running the
+idempotent bootstrap scripts once as an admin — see
+[`include/sql/bootstrap/`](include/sql/bootstrap/README.md). This also generates
+the RSA key that `.env` points at (key-pair auth, [ADR-0018](docs/adr/0018-snowflake-key-pair-auth.md)).
+The pipeline then runs as the least-privilege role `OPENAQ_PIPELINE`, never
+`ACCOUNTADMIN`.
+
 ```bash
-cp .env.example .env      # fill in Snowflake + SMTP + OpenAQ credentials
+cp .env.example .env      # fill in `account` + SMTP + OpenAQ; key path is preset
 astro dev start
 ```
 
-The `openaq_ingest` DAG loads data into BRONZE and emits an Asset, which triggers `openaq_transform` (dbt via Cosmos) with the WAP gate before publishing to GOLD.
+Trigger the `_snowflake_smoke` DAG to confirm the connection (it logs the
+Snowflake version and `current_role=OPENAQ_PIPELINE`). Once ingest lands, the
+`openaq_ingest` DAG loads data into BRONZE and emits an Asset, which triggers
+`openaq_transform` (dbt via Cosmos) with the WAP gate before publishing to GOLD.
 
 ---
 
