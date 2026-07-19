@@ -36,14 +36,29 @@ ALTER WAREHOUSE OPENAQ_WH SET
 CREATE DATABASE IF NOT EXISTS OPENAQ
     COMMENT = 'OpenAQ air-quality pipeline — bronze/silver/gold medallion';
 
-CREATE SCHEMA IF NOT EXISTS OPENAQ.BRONZE
+-- All four use MANAGED ACCESS. In a standard schema the role that creates an
+-- object also owns it and may grant privileges on it — so OPENAQ_PIPELINE, which
+-- creates every table dbt builds, could hand out access to its own tables (up to
+-- `GRANT SELECT ... TO ROLE PUBLIC`). Managed access keeps grant decisions with
+-- the schema owner, so access stays defined by 02_grants.sql alone. That script
+-- runs as SECURITYADMIN, which holds MANAGE GRANTS account-wide, so both the
+-- direct and the future grants still apply.
+CREATE SCHEMA IF NOT EXISTS OPENAQ.BRONZE WITH MANAGED ACCESS
     COMMENT = 'Raw as received (VARIANT); overwrite-per-window (ADR-0008)';
-CREATE SCHEMA IF NOT EXISTS OPENAQ.SILVER
+CREATE SCHEMA IF NOT EXISTS OPENAQ.SILVER WITH MANAGED ACCESS
     COMMENT = 'Cleaned, typed, deduplicated';
-CREATE SCHEMA IF NOT EXISTS OPENAQ.GOLD
+CREATE SCHEMA IF NOT EXISTS OPENAQ.GOLD WITH MANAGED ACCESS
     COMMENT = 'Business aggregates + station dimension (SCD2)';
-CREATE SCHEMA IF NOT EXISTS OPENAQ.CI
+CREATE SCHEMA IF NOT EXISTS OPENAQ.CI WITH MANAGED ACCESS
     COMMENT = 'Isolated schema for dbt build in CI (ADR-0016)';
+
+-- CREATE ... IF NOT EXISTS silently skips schemas that already exist, so it would
+-- never retrofit managed access onto a database provisioned before this change.
+-- These ALTERs converge that state and are no-ops once it is set.
+ALTER SCHEMA OPENAQ.BRONZE ENABLE MANAGED ACCESS;
+ALTER SCHEMA OPENAQ.SILVER ENABLE MANAGED ACCESS;
+ALTER SCHEMA OPENAQ.GOLD   ENABLE MANAGED ACCESS;
+ALTER SCHEMA OPENAQ.CI     ENABLE MANAGED ACCESS;
 
 -- Snowflake auto-creates a PUBLIC schema in every new database; this project
 -- addresses schemas explicitly and never uses PUBLIC, so drop it to keep stray

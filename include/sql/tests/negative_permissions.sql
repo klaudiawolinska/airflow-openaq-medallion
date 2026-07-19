@@ -33,6 +33,16 @@ CREATE SCHEMA    OPENAQ.should_fail;       -- EXPECT: insufficient privileges
 USE SCHEMA OPENAQ.CI;                       -- EXPECT: does not exist / not authorized
 CREATE TABLE OPENAQ.CI.should_fail (x INT); -- EXPECT: insufficient privileges
 
+-- --- Section 2b: cannot re-grant access to the tables it owns ----------------
+-- The medallion schemas use MANAGED ACCESS (00_warehouse_database.sql), so
+-- owning an object no longer carries the right to grant on it. Without this,
+-- the pipeline role could widen access to bronze/silver/gold on its own.
+-- Substitute any table the pipeline has already created.
+GRANT SELECT ON TABLE OPENAQ.BRONZE.<any_existing_table> TO ROLE PUBLIC;
+                                           -- EXPECT: insufficient privileges
+                                           -- (managed schema: only the schema
+                                           --  owner / MANAGE GRANTS may grant)
+
 -- --- Section 3: cannot escalate to an admin role (mode A only) ---------------
 -- Only meaningful when authenticated AS AIRFLOW_USER; see header, mode B.
 USE ROLE ACCOUNTADMIN;                      -- EXPECT: role not granted to user

@@ -3,9 +3,12 @@
 Verifies that Airflow can reach Snowflake with the least-privilege pipeline
 credentials provisioned in milestone 1 (see ``include/sql/bootstrap/``). It runs
 a dependency-free ``SELECT CURRENT_VERSION()`` — plus the current role, warehouse
-and database — through the ``snowflake_default`` connection and logs the result,
-so a green run confirms the connection, key-pair auth, and role wiring end to
-end. ``current_role`` should read ``OPENAQ_PIPELINE`` (never ``ACCOUNTADMIN``).
+and database — through the ``snowflake_default`` connection, so a green run
+confirms the connection, key-pair auth, and role wiring end to end.
+
+The task **fails** if the session is not running as ``OPENAQ_PIPELINE``: an
+over-privileged connection (``ACCOUNTADMIN``, say) would otherwise log green and
+quietly break the least-privilege contract this DAG exists to prove.
 
 Manual-trigger only (``schedule=None``): it touches Snowflake, so it must not run
 on a bare ``astro dev start`` without credentials. The leading underscore keeps
@@ -21,6 +24,9 @@ from airflow.sdk import dag, task
 log = logging.getLogger(__name__)
 
 SNOWFLAKE_CONN_ID = "snowflake_default"
+
+# The pipeline must never run with broader rights than this (ADR-0016).
+EXPECTED_ROLE = "OPENAQ_PIPELINE"
 
 DEFAULT_ARGS = {
     "owner": "data-platform",
@@ -50,6 +56,13 @@ def snowflake_smoke():
             "SELECT CURRENT_VERSION(), CURRENT_ROLE(), "
             "CURRENT_WAREHOUSE(), CURRENT_DATABASE()"
         )
+        if (role or "").upper() != EXPECTED_ROLE:
+            raise RuntimeError(
+                f"Snowflake session runs as {role!r}, expected {EXPECTED_ROLE!r}. "
+                "Check the `role` key in the connection extra — the pipeline must "
+                "not hold broader privileges than the ones bootstrap grants it."
+            )
+
         context = {
             "snowflake_version": version,
             "current_role": role,

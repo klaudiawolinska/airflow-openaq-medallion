@@ -15,7 +15,7 @@ See [ADR-0016](../../../docs/adr/0016-snowflake-rbac.md) (RBAC),
 |---|---|---|
 | Warehouse | `OPENAQ_WH` | XS, `AUTO_SUSPEND=60`, `AUTO_RESUME` |
 | Database | `OPENAQ` | medallion |
-| Schemas | `BRONZE` / `SILVER` / `GOLD` / `CI` | `CI` isolates `dbt build` in CI |
+| Schemas | `BRONZE` / `SILVER` / `GOLD` / `CI` | managed access (owners cannot re-grant); `CI` isolates `dbt build` in CI |
 | Role | `OPENAQ_PIPELINE` | least-privilege; read/write on the medallion schemas |
 | Role | `OPENAQ_CI` | CI schema only; no access to the main tables |
 | Role | `OPENAQ_READ` | read-only on `GOLD` (consumers / Snowsight); optional |
