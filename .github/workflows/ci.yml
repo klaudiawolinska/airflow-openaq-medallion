@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
 
-# Least privilege: CI only reads the repo (never pushes back).
+# Least privilege: CI only reads the repo
 permissions:
   contents: read
 
@@ -36,8 +36,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      # Building the image also validates that requirements.txt resolves on the
-      # runtime's Python (3.14). Tests then run against the exact deployed image.
+      # Building the image validates that requirements.txt resolves in the
+      # runtime environment. Tests then run against the exact image that is deployed.
       - name: Build Astro runtime image
         run: docker build -t openaq-airflow:ci .
       - name: Run DAG-integrity tests inside the image

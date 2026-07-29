@@ -1,10 +1,7 @@
 """Healthcheck DAG.
 
-A trivial, dependency-free DAG that verifies the Airflow runtime is up and that
-DAGs parse and run. It touches no external systems (no Snowflake, OpenAQ or
-SMTP), so it is safe to trigger in any environment, including a fresh
-`astro dev start`. The leading underscore keeps it sorted to the top of the UI
-and marks it as an operational, non-data DAG.
+A dependency-free DAG that verifies that the Airflow runtime is operational.
+It touches no external systems, so it is safe to trigger in any environment.
 """
 
 from datetime import UTC, datetime
@@ -12,8 +9,7 @@ from datetime import UTC, datetime
 from airflow.sdk import dag, task
 
 DEFAULT_ARGS = {
-    "owner": "data-platform",
-    "retries": 2,
+    "retries": 0,
 }
 
 
@@ -29,7 +25,6 @@ DEFAULT_ARGS = {
 def healthcheck():
     @task
     def ping() -> str:
-        """Return a constant so a successful run is observable in UI and logs."""
         return "ok"
 
     ping()
