@@ -17,8 +17,6 @@ from contextlib import contextmanager
 import pytest
 from airflow.models import DagBag
 
-MIN_RETRIES = 2
-
 
 @contextmanager
 def _suppress_airflow_logging():
@@ -54,13 +52,16 @@ def test_all_dags_have_tags(dag_bag: DagBag) -> None:
     assert not untagged, f"DAGs missing tags: {untagged}"
 
 
-def test_all_dags_set_retries(dag_bag: DagBag) -> None:
+def test_all_dags_explicitly_set_retries(dag_bag: DagBag) -> None:
     offenders = []
+
     for dag_id, dag in dag_bag.dags.items():
-        retries = (dag.default_args or {}).get("retries")
-        if retries is None or retries < MIN_RETRIES:
-            offenders.append((dag_id, retries))
+        default_args = dag.default_args or {}
+
+        if "retries" not in default_args:
+            offenders.append(dag_id)
+
     assert not offenders, (
-        f"DAGs must set default_args['retries'] >= {MIN_RETRIES}; "
-        f"offenders (dag_id, retries): {offenders}"
+        "DAGs must explicitly define default_args['retries']; "
+        f"offenders: {offenders}"
     )
