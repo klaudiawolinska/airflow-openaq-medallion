@@ -9,7 +9,7 @@
 -- HOW TO RUN — two modes, different coverage:
 --
 --   A) As AIRFLOW_USER via key-pair (snowsql -a <acct> -u AIRFLOW_USER
---      --private-key-path include/.keys/airflow_user_rsa.p8). This is the FULL
+--      --private-key-path include/keys/airflow_user_rsa.p8). This is the FULL
 --      check: the login user holds only OPENAQ_PIPELINE, so the role-escalation
 --      block (section 3) is meaningful.
 --

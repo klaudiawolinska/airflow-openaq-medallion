@@ -23,7 +23,7 @@ default.
 Authenticate both service users with **RSA key-pair**, and create them as
 **`TYPE = SERVICE`**. The bootstrap sets `RSA_PUBLIC_KEY` on each user
 (`include/sql/bootstrap/03_users.sql`); the private key stays local, gitignored
-under `include/.keys/`, and is referenced from the Airflow connection extra via
+under `include/keys/`, and is referenced from the Airflow connection extra via
 `private_key_file` (`authenticator = snowflake_jwt`). `.env.example` ships the
 key-pair form of `AIRFLOW_CONN_SNOWFLAKE_DEFAULT` (no password).
 
@@ -43,7 +43,7 @@ key-pair form of `AIRFLOW_CONN_SNOWFLAKE_DEFAULT` (no password).
 ## Consequences
 
 - A one-time key-generation step in setup (documented in the bootstrap README);
-  `include/.keys/` is gitignored so private keys are never committed.
+  `include/keys/` is gitignored so private keys are never committed.
 - `TYPE = SERVICE` users cannot fall back to a password — the key must be present
   and valid, which is the intended posture.
 - CI (M4) provisions `OPENAQ_CI_USER`'s key as a GitHub Actions secret; the
