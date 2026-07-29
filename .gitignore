@@ -1,4 +1,4 @@
-# macOS
+# OS
 .DS_Store
 
 # Python
@@ -11,19 +11,24 @@ venv/
 .ruff_cache/
 .mypy_cache/
 
-# Environment / secrets
+# Generated test fixtures
+tests/fixtures/openaq/
+
+# Environment
 .env
 .env.*
 !.env.example
-# Snowflake key-pair private keys (ADR-0018) — never commit
-include/.keys/
 
-# Astro / Airflow
-# Commit .astro/config.yaml and the parse helper so `astro dev start` works on a
-# fresh clone; ignore only the local/volatile bits (Astro's own convention).
+# Local secrets
+include/keys/
+
+# Astro
 .astro/standalone/
 .astro/*.local.yml
 .astro/*.local.yaml
+.astro/config.yaml.lock
+
+# Airflow
 airflow_settings.yaml
 webserver_config.py
 airflow-webserver.pid
@@ -38,7 +43,7 @@ dbt_packages/
 **/dbt_packages/
 **/logs/
 
-# Editors / local tooling
+# Editors
 .idea/
 .vscode/
 .claude/settings.local.json
