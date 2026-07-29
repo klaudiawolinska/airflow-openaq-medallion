@@ -28,6 +28,13 @@ Routine refactoring, naming, code organisation, testing strategy, and local
 implementation choices do not require ADRs unless they create lasting
 architectural constraints.
 
+Keep each file focused on its primary purpose. Each file should answer the questions 
+naturally associated with its purpose, and no others.
+
+Do not use configuration files, dependency manifests, or build files as
+surrogate documentation. Explanatory material belongs in README files or ADRs,
+not alongside declarative configuration.
+
 ## Decisions
 
 - Present numbers, thresholds, and scope as settled only when they have been
@@ -43,6 +50,7 @@ architectural constraints.
   or explicitly mark it as an open question.
 - Prefer omission over speculation. Documentation is allowed to be incomplete;
   it must not be inaccurate.
+- Prefer omission over unnecessary explanation.
 
 ## Git
 
