@@ -2,8 +2,8 @@
 
 ## Documentation
 
-Every document in this repo is written for one reader: someone opening it for
-the first time who needs to understand the system **as it stands now**.
+When writing documentation, optimise for the first-time reader. Write for the 
+repository user, not the project maintainer.
 
 - Write only what is true of the current system. No project history, superseded
   decisions, or phrases like "previously", "used to be", or "changed from".
@@ -19,6 +19,9 @@ the first time who needs to understand the system **as it stands now**.
 - Prefer concrete statements over qualifiers. Replace words like "typically",
   "generally", "usually", and "often" with precise descriptions whenever
   possible.
+- Prefer describing the purpose of a step over describing what the command does.
+- Do not turn README instructions into validation or test procedures.
+- Prefer natural technical English over overly formal or specification-like wording.
 
 ADRs record decisions and the evidence behind them. Mention an alternative only
 when a reader might reasonably consider it and needs to understand why it was
