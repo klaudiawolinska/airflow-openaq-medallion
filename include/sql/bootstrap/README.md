@@ -31,15 +31,15 @@ Each script starts with `USE ROLE` for the least-privileged system role required
 Generate an unencrypted RSA private key (PKCS#8 format) for local development only:
 
 ```bash
-mkdir -p include/.keys                       # gitignored
+mkdir -p include/keys                       # gitignored
 # Generate an RSA private key and convert it to the PKCS#8 format expected by Snowflake:
 openssl genrsa 2048 \
   | openssl pkcs8 -topk8 -inform PEM -nocrypt \
-      -out include/.keys/airflow_user_rsa.p8
-openssl rsa -in include/.keys/airflow_user_rsa.p8 \
-      -pubout -out include/.keys/airflow_user_rsa.pub
+      -out include/keys/airflow_user_rsa.p8
+openssl rsa -in include/keys/airflow_user_rsa.p8 \
+      -pubout -out include/keys/airflow_user_rsa.pub
 # Extract the public key as a single line (without the PEM header/footer):
-grep -v -- '-----' include/.keys/airflow_user_rsa.pub | tr -d '\n'; echo
+grep -v -- '-----' include/keys/airflow_user_rsa.pub | tr -d '\n'; echo
 ```
 
 Copy the public key and paste into `03_users.sql` for `AIRFLOW_USER`.
@@ -74,7 +74,7 @@ Update `AIRFLOW_CONN_SNOWFLAKE_DEFAULT` in `.env`:
 - The account locator alone (for example `ab12345`) works only for AWS `us-west-2`. For all other regions or cloud providers, use the organisation account identifier.
 - The connection is configured to use the private key generated in step 1 at:
   ```
-  /usr/local/airflow/include/.keys/airflow_user_rsa.p8
+  /usr/local/airflow/include/keys/airflow_user_rsa.p8
   ```
   Astro bind-mounts the project into the container, so no additional configuration is required.
 
