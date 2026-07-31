@@ -1,7 +1,7 @@
 # Tooling configuration for the repository. This is not a Python package.
 
 [tool.ruff]
-target-version = "py314"
+target-version = "py313"
 line-length = 100
 
 # Ignore Astro-generated files.
