@@ -42,6 +42,10 @@ Record decisions as facts only when they are supported by evidence or explicit a
 - Prefer omission over speculation. Documentation is allowed to be incomplete; it must not be inaccurate.
 - Prefer concise explanations. Explain only what helps the reader understand or safely change the code.
 
+## Tests
+
+Tests should verify the current contract of the code, not its development history. If a requirement changes, update the contract and write tests against that contract. Avoid tests that exist only because a particular change happened during development; they document history rather than protecting behavior.
+
 ## Git
 
 - Never commit, push, or open a pull request without being asked. A change of topic is not approval.
