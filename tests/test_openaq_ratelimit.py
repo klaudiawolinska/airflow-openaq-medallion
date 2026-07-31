@@ -3,6 +3,9 @@
 All tests run on virtual time using ``FakeClock``.
 """
 
+from collections import deque
+from threading import Event, Thread
+
 import pytest
 
 from include.openaq.ratelimit import OPENAQ_FREE_TIER, SlidingWindowLimiter, Window
@@ -93,6 +96,48 @@ def test_slots_are_reusable_once_the_window_slides_past() -> None:
     clock.now = 11.0  # both entries are now older than the window
 
     assert limiter.acquire() == 0.0
+
+
+def test_concurrent_acquires_do_not_reserve_the_same_slot() -> None:
+    limiter, clock = _limiter(Window(max_requests=1, seconds=60.0))
+    first_append_started = Event()
+    allow_first_append = Event()
+
+    class PausingDeque(deque[float]):
+        def __init__(self) -> None:
+            super().__init__()
+            self.appended_at: list[float] = []
+
+        def append(self, value: float) -> None:
+            if not self.appended_at:
+                first_append_started.set()
+                assert allow_first_append.wait(timeout=1.0)
+            self.appended_at.append(value)
+            super().append(value)
+
+    log = PausingDeque()
+    limiter._logs = (log,)
+    results: list[float] = []
+
+    def acquire_slot() -> None:
+        results.append(limiter.acquire())
+
+    first = Thread(target=acquire_slot)
+    first.start()
+    assert first_append_started.wait(timeout=1.0)
+
+    second = Thread(target=acquire_slot)
+    second.start()
+    allow_first_append.set()
+
+    first.join(timeout=1.0)
+    second.join(timeout=1.0)
+
+    assert not first.is_alive()
+    assert not second.is_alive()
+    assert sorted(results) == [0.0, 60.0]
+    assert log.appended_at == [0.0, 60.0]
+    assert clock.now == pytest.approx(60.0)
 
 
 def test_free_tier_matches_the_documented_limits() -> None:

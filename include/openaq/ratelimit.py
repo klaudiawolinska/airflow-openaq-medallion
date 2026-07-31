@@ -7,6 +7,7 @@ import time
 from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass
+from threading import Lock
 
 
 @dataclass(frozen=True)
@@ -34,7 +35,8 @@ OPENAQ_FREE_TIER: tuple[Window, ...] = (
 class SlidingWindowLimiter:
     """Blocks until a request fits inside every configured window.
 
-    ``clock`` and ``sleep`` are injectable for deterministic testing.
+    Instances are safe to share between threads in one process. ``clock`` and
+    ``sleep`` are injectable for deterministic testing.
     """
 
     def __init__(
@@ -51,6 +53,7 @@ class SlidingWindowLimiter:
         self._sleep = sleep
         # One timestamp log per window; each is pruned against its own span.
         self._logs: tuple[deque[float], ...] = tuple(deque() for _ in windows)
+        self._lock = Lock()
 
     def acquire(self) -> float:
         """Reserve one request slot, sleeping if necessary.
@@ -60,12 +63,13 @@ class SlidingWindowLimiter:
         """
         slept = 0.0
         while True:
-            now = self._clock()
-            wait = self._longest_wait(now)
-            if wait <= 0:
-                for log in self._logs:
-                    log.append(now)
-                return slept
+            with self._lock:
+                now = self._clock()
+                wait = self._longest_wait(now)
+                if wait <= 0:
+                    for log in self._logs:
+                        log.append(now)
+                    return slept
             self._sleep(wait)
             slept += wait
 
