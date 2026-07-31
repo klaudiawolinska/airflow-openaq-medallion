@@ -183,7 +183,7 @@ class OpenAQClient:
 
     def list_locations(self, *, iso: str = "PL", **filters: Any) -> FetchResult:
         """Fetch monitoring locations for a country.
-        
+
         Args:
             iso: ISO 3166-1 alpha-2 country code.
             **filters: Additional OpenAQ query parameters.
