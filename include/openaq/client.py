@@ -28,6 +28,7 @@ import requests
 from .errors import (
     OpenAQAuthError,
     OpenAQError,
+    OpenAQInvalidJSONResponseError,
     OpenAQRateLimitError,
     OpenAQRequestError,
     OpenAQResponseError,
@@ -403,7 +404,7 @@ class OpenAQClient:
         try:
             payload = response.json()
         except ValueError as exc:
-            raise OpenAQResponseError(
+            raise OpenAQInvalidJSONResponseError(
                 f"{path} returned {status} with a body that is not JSON: "
                 f"{response.text[:200]!r}"
             ) from exc

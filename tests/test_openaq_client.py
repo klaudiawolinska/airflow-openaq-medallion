@@ -16,6 +16,7 @@ from include.openaq.client import (
 )
 from include.openaq.errors import (
     OpenAQAuthError,
+    OpenAQInvalidJSONResponseError,
     OpenAQRateLimitError,
     OpenAQRequestError,
     OpenAQResponseError,
@@ -414,10 +415,28 @@ def test_backoff_grows_exponentially_between_attempts() -> None:
     assert clock.slept == [1.0, 2.0, 4.0]
 
 
-def test_non_json_body_raises_a_response_error() -> None:
-    client, _, _ = build_client([FakeResponse(status_code=200, text="<html>oops</html>")])
+def test_non_json_body_is_retried() -> None:
+    client, session, clock = build_client(
+        [
+            FakeResponse(status_code=200, text="<html>temporary proxy response</html>"),
+            FakeResponse(json_body=envelope([])),
+        ],
+        backoff_base=1.0,
+    )
 
-    with pytest.raises(OpenAQResponseError, match="not JSON"):
+    result = client.list_measurements(1, datetime_from=WINDOW_FROM, datetime_to=WINDOW_TO)
+
+    assert result.records == []
+    assert len(session.calls) == 2
+    assert clock.slept == [1.0]
+
+
+def test_non_json_body_raises_a_retryable_response_error_after_final_attempt() -> None:
+    client, _, _ = build_client(
+        [FakeResponse(status_code=200, text="<html>oops</html>")], max_attempts=1
+    )
+
+    with pytest.raises(OpenAQInvalidJSONResponseError, match="not JSON"):
         client.list_measurements(1, datetime_from=WINDOW_FROM, datetime_to=WINDOW_TO)
 
 

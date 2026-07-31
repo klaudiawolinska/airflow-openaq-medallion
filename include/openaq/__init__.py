@@ -12,6 +12,7 @@ from .client import (
 from .errors import (
     OpenAQAuthError,
     OpenAQError,
+    OpenAQInvalidJSONResponseError,
     OpenAQRateLimitError,
     OpenAQRequestError,
     OpenAQResponseError,
@@ -30,6 +31,7 @@ __all__ = [
     "OpenAQAuthError",
     "OpenAQClient",
     "OpenAQError",
+    "OpenAQInvalidJSONResponseError",
     "OpenAQRateLimitError",
     "OpenAQRequestError",
     "OpenAQResponseError",

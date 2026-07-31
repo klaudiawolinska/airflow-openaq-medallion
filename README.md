@@ -148,6 +148,23 @@ docker build -t openaq-airflow:lint .
 docker run --rm -v "$PWD":/workspace -w /workspace openaq-airflow:lint sh -lc 'python -m pip install --no-cache-dir ruff==0.15.22 && python -m ruff check .'
 ```
 
+## Test
+
+Build the Astro Runtime image before running tests. The image uses Python 3.13, installs `requirements.txt`, and contains the repository source and tests.
+
+```bash
+docker build -t openaq-airflow:ci .
+docker run --rm openaq-airflow:ci python -m pytest tests -v
+```
+
+To run one test module, replace `tests` with its path:
+
+```bash
+docker run --rm openaq-airflow:ci python -m pytest tests/test_openaq_client.py -v
+```
+
+Rebuild the image after changing the `Dockerfile` or `requirements.txt`.
+
 ---
 
 ## Data & attribution

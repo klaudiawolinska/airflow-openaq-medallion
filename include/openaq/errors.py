@@ -51,3 +51,7 @@ class OpenAQRequestError(OpenAQError):
 
 class OpenAQResponseError(OpenAQError):
     """The API returned an unexpected response."""
+
+
+class OpenAQInvalidJSONResponseError(OpenAQRetryableError):
+    """The API returned a response body that could not be decoded as JSON."""
