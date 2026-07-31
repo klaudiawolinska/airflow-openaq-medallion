@@ -139,6 +139,17 @@ Snowflake version and `current_role=OPENAQ_PIPELINE`). Once ingest lands, the
 
 ---
 
+## Lint Python code
+
+Run Ruff in the Astro runtime image before committing Python changes. This uses the same pinned Ruff version as CI without requiring Ruff on the host machine.
+
+```bash
+docker build -t openaq-airflow:lint .
+docker run --rm -v "$PWD":/workspace -w /workspace openaq-airflow:lint sh -lc 'python -m pip install --no-cache-dir ruff==0.15.22 && python -m ruff check .'
+```
+
+---
+
 ## Data & attribution
 
 Air-quality data is sourced from the [OpenAQ](https://openaq.org) API (v3). For Poland the underlying measurements are provided by **GIOŚ** (Główny Inspektorat Ochrony Środowiska). This data is subject to OpenAQ's and the originating providers' terms; it is **not** relicensed by this project, and no raw data is committed to the repository. A free OpenAQ API key is required and is supplied as a secret via `.env`.

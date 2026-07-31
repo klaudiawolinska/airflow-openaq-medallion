@@ -46,6 +46,8 @@ Record decisions as facts only when they are supported by evidence or explicit a
 
 Tests should verify the current contract of the code, not its development history. If a requirement changes, update the contract and write tests against that contract. Avoid tests that exist only because a particular change happened during development; they document history rather than protecting behavior.
 
+- Before every commit, run Ruff in the Astro runtime image: `docker build -t openaq-airflow:lint . && docker run --rm -v "$PWD":/workspace -w /workspace openaq-airflow:lint sh -lc 'python -m pip install --no-cache-dir ruff==0.15.22 && python -m ruff check .'`. Do not use a host installation of Ruff for this check.
+
 ## Git
 
 - Never commit, push, or open a pull request without being asked. A change of topic is not approval.
