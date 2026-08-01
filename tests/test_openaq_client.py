@@ -173,7 +173,7 @@ def test_identical_consecutive_pages_raise_instead_of_looping() -> None:
 
 def test_max_pages_below_one_is_rejected_at_construction() -> None:
     """Otherwise the walk reports exhaustion without having sent a request."""
-    with pytest.raises(ValueError, match="max_pages must be >= 1"):
+    with pytest.raises(ValueError, match="max_pages must be"):
         OpenAQClient("k", max_pages=0)
 
 
@@ -195,6 +195,18 @@ def test_cross_page_duplicates_are_counted_but_never_dropped() -> None:
     assert len(result.records) == 3, "duplicates must survive into bronze"
     assert result.duplicate_count == 1
     assert result.duplicate_sample == (("2026-07-01T01:00:00Z", 2),)
+
+
+def test_duplicates_within_one_page_are_not_counted_as_cross_page_duplicates() -> None:
+    repeated = measurement(utc="2026-07-01T01:00:00Z")
+    client, _, _ = build_client(
+        [FakeResponse(json_body=envelope([repeated, dict(repeated)]))], page_size=3
+    )
+
+    result = client.list_measurements(1, datetime_from=WINDOW_FROM, datetime_to=WINDOW_TO)
+
+    assert len(result.records) == 2
+    assert result.duplicate_count == 0
 
 
 def test_same_timestamp_on_a_different_parameter_is_not_a_duplicate() -> None:
@@ -219,7 +231,8 @@ def test_same_timestamp_on_a_different_parameter_is_not_a_duplicate() -> None:
 
 def test_records_without_an_identity_key_pass_through_unaccounted() -> None:
     """Two unidentifiable records must not be mistaken for each other."""
-    shapeless = {"value": 1.0, "period": None, "parameter": None}
+    shapeless = measurement(utc="2026-07-01T00:00:00Z")
+    shapeless["parameter"] = None
     client, _, _ = build_client(
         [FakeResponse(json_body=envelope([shapeless, dict(shapeless)]))], page_size=5
     )
@@ -230,9 +243,11 @@ def test_records_without_an_identity_key_pass_through_unaccounted() -> None:
     assert result.duplicate_count == 0
 
 
-def test_measurement_identity_returns_none_without_a_period() -> None:
+def test_measurement_identity_returns_none_without_every_identity_component() -> None:
     assert measurement_identity({"value": 3.0}) is None
     assert measurement_identity({"period": {"datetimeFrom": None}}) is None
+    without_parameter_id = {"period": {"datetimeFrom": {"utc": "2026-07-01T00:00:00Z"}}}
+    assert measurement_identity(without_parameter_id) is None
 
 
 def test_records_are_returned_verbatim_for_variant_storage() -> None:
@@ -524,10 +539,32 @@ def test_preformatted_string_bounds_pass_through() -> None:
     assert session.calls[0]["params"]["datetime_from"] == "2026-07-01T00:00:00Z"
 
 
-@pytest.mark.parametrize("page_size", [0, -1, 1001])
-def test_page_size_outside_the_api_maximum_is_rejected(page_size: int) -> None:
+@pytest.mark.parametrize("page_size", [0, -1, 1.5, 1001])
+def test_invalid_page_size_is_rejected(page_size: int | float) -> None:
     with pytest.raises(ValueError, match="page_size must be"):
         OpenAQClient("k", page_size=page_size)
+
+
+@pytest.mark.parametrize(("argument", "value"), [("max_attempts", 1.5), ("max_pages", 1.5)])
+def test_non_integer_pagination_limits_are_rejected(argument: str, value: float) -> None:
+    with pytest.raises(ValueError, match=f"{argument} must be"):
+        OpenAQClient("k", **{argument: value})
+
+
+@pytest.mark.parametrize(
+    ("argument", "value"),
+    [
+        ("timeout", 0.0),
+        ("timeout", float("nan")),
+        ("backoff_base", -1.0),
+        ("backoff_base", float("inf")),
+        ("backoff_cap", -1.0),
+        ("backoff_cap", float("nan")),
+    ],
+)
+def test_invalid_request_timing_configuration_is_rejected(argument: str, value: float) -> None:
+    with pytest.raises(ValueError, match=f"{argument} must be"):
+        OpenAQClient("k", **{argument: value})
 
 
 # ----------------------------------------------------- locations and sensors

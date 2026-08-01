@@ -15,6 +15,7 @@ Notes about the API:
 """
 
 import logging
+import math
 import random
 import time
 from collections.abc import Callable, Iterable
@@ -85,6 +86,10 @@ class FetchResult:
 type IdentityKey = Callable[[dict[str, Any]], Any]
 
 
+def _is_finite_number(value: object) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
 def location_identity(record: dict[str, Any]) -> Any:
     """Return the location's identity key for duplicate detection."""
     return record.get("id")
@@ -99,10 +104,11 @@ def measurement_identity(record: dict[str, Any]) -> Any:
     period = record.get("period") or {}
     datetime_from = period.get("datetimeFrom") or {}
     started_at = datetime_from.get("utc")
-    if started_at is None:
-        return None
     parameter = record.get("parameter") or {}
-    return (started_at, parameter.get("id"))
+    parameter_id = parameter.get("id")
+    if started_at is None or parameter_id is None:
+        return None
+    return (started_at, parameter_id)
 
 
 def _serialise_datetime(value: datetime | str, *, argument: str) -> str:
@@ -159,12 +165,28 @@ class OpenAQClient:
     ) -> None:
         if not api_key:
             raise ValueError("api_key must not be empty")
-        if not 1 <= page_size <= MAX_PAGE_SIZE:
-            raise ValueError(f"page_size must be 1..{MAX_PAGE_SIZE}, got {page_size}")
-        if max_attempts < 1:
-            raise ValueError(f"max_attempts must be >= 1, got {max_attempts}")
-        if max_pages < 1:
-            raise ValueError(f"max_pages must be >= 1, got {max_pages}")
+        if (
+            isinstance(page_size, bool)
+            or not isinstance(page_size, int)
+            or not 1 <= page_size <= MAX_PAGE_SIZE
+        ):
+            raise ValueError(
+                f"page_size must be an integer from 1 to {MAX_PAGE_SIZE}, got {page_size!r}"
+            )
+        if isinstance(max_attempts, bool) or not isinstance(max_attempts, int) or max_attempts < 1:
+            raise ValueError(f"max_attempts must be a positive integer, got {max_attempts!r}")
+        if isinstance(max_pages, bool) or not isinstance(max_pages, int) or max_pages < 1:
+            raise ValueError(f"max_pages must be a positive integer, got {max_pages!r}")
+        if not _is_finite_number(timeout) or timeout <= 0:
+            raise ValueError(f"timeout must be a positive finite number, got {timeout!r}")
+        if not _is_finite_number(backoff_base) or backoff_base < 0:
+            raise ValueError(
+                f"backoff_base must be a non-negative finite number, got {backoff_base!r}"
+            )
+        if not _is_finite_number(backoff_cap) or backoff_cap < 0:
+            raise ValueError(
+                f"backoff_cap must be a non-negative finite number, got {backoff_cap!r}"
+            )
 
         self._api_key = api_key
         self._base_url = base_url.rstrip("/")
@@ -256,7 +278,7 @@ class OpenAQClient:
         tracks duplicate records across pages.
         """
         records: list[dict[str, Any]] = []
-        seen: set[Any] = set()
+        previous_page_keys: set[Any] = set()
         duplicates: list[Any] = []
         duplicate_count = 0
         previous_results: list[dict[str, Any]] | None = None
@@ -287,17 +309,15 @@ class OpenAQClient:
 
             page_keys = [identity(record) for record in results]
             for record, key in zip(results, page_keys, strict=True):
-                if key is not None:
-                    if key in seen:
-                        duplicate_count += 1
-                        if len(duplicates) < _MAX_DUPLICATE_SAMPLE:
-                            duplicates.append(key)
-                    else:
-                        seen.add(key)
+                if key is not None and key in previous_page_keys:
+                    duplicate_count += 1
+                    if len(duplicates) < _MAX_DUPLICATE_SAMPLE:
+                        duplicates.append(key)
                 records.append(record)
+            previous_page_keys.update(key for key in page_keys if key is not None)
 
             # A short page marks the end of the result set.
-            # `meta.found` is not reliable enough to use for termination.
+            # `meta.found` is not guaranteed to be numeric, so it cannot end the walk.
             if len(results) < self._page_size:
                 break
             page += 1
@@ -382,7 +402,7 @@ class OpenAQClient:
         if status == 429:
             raise OpenAQRateLimitError(
                 f"{path} was rate limited (429). The client paces itself, so this "
-                "signals another process sharing the key or or a mismatch between "
+                "signals another process sharing the key or a mismatch between "
                 "the client and server rate-limit accounting.",
                 retry_after=_parse_retry_after(response.headers),
             )
