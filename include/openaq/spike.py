@@ -104,12 +104,15 @@ def _most_recently_active(locations: list[dict[str, Any]]) -> dict[str, Any] | N
     dated: list[tuple[datetime, dict[str, Any]]] = []
     for location in locations:
         raw = (location.get("datetimeLast") or {}).get("utc")
-        if not raw:
+        if not isinstance(raw, str) or not raw:
             continue
         try:
-            dated.append((datetime.fromisoformat(raw.replace("Z", "+00:00")), location))
+            stamp = datetime.fromisoformat(raw.replace("Z", "+00:00"))
         except ValueError:
             continue
+        if stamp.utcoffset() is None:
+            continue
+        dated.append((stamp, location))
     return max(dated, key=lambda pair: pair[0])[1] if dated else None
 
 
