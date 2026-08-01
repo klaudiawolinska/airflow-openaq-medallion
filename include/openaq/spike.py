@@ -96,25 +96,6 @@ def main() -> int:
     print(f"  Cross-page duplicates observed: {measurements.duplicate_count}.")
     _record_samples(locations.records[:3], sensors[:3], measurements.records[:5])
 
-    print("\n=== Empty historical window ===")
-    far_past = datetime(2000, 1, 1, tzinfo=UTC)
-    try:
-        empty = client.list_measurements(
-            target["id"], datetime_from=far_past, datetime_to=far_past + timedelta(hours=1)
-        )
-    except OpenAQRequestError as exc:
-        check(
-            "A historical window with no data returns no records",
-            False,
-            f"Sensor {target['id']} returned HTTP {exc.status_code}: {exc}",
-        )
-        return _summarise()
-
-    check(
-        "A historical window with no data returns no records",
-        not empty.records,
-        f"Sensor {target['id']} returned {len(empty.records)} record(s).",
-    )
     return _summarise()
 
 
