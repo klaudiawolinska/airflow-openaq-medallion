@@ -6,9 +6,8 @@ API responses unchanged as Python dictionaries.
 Notes about the API:
 
 * datetime filters are `datetime_from` and `datetime_to`;
-* `meta.found` is not used for pagination because it may be an integer, a
-  string (for example `">1000"`), or `null`. Pagination stops when a page
-  contains fewer records than requested;
+* OpenAQ's schema defines `meta.found` as an integer, string or `null`, so
+  pagination stops when a page contains fewer records than requested;
 * `/locations/{id}/sensors` does not support pagination;
 * `/locations` already embeds each location's `sensors` array. Use
   `sensors_from_location()` when discovering sensors and `list_sensors()`
