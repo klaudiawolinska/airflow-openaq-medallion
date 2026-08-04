@@ -1,26 +1,20 @@
-# ADR-0004: WAP failure handling — quarantine expected dirt, fail-closed on integrity
+# ADR-0004: Data-quality failure handling
 
 - Status: Accepted
 - Date: 2026-07-17
 
 ## Context
 
-Standard dbt tests are **dataset-level** pass/fail; they do not route individual bad rows. We need a policy for what happens when data fails the audit, given that some dirtiness in OpenAQ is expected and some failures signal a real regression.
+The pipeline must distinguish invalid source records from failures that indicate that the transformation or its assumptions are no longer valid. dbt tests report pass or fail for a dataset; they do not determine how individual records should be handled.
 
 ## Decision
 
-Two tiers:
+Invalid source records, including missing required values, duplicate observations, and measurements outside the accepted range, are excluded from gold and retained or marked in silver for inspection. Their presence does not block publication of valid data.
 
-- **Expected dirtiness** (nulls, out-of-range values, duplicate rows) → cleaned / **quarantined in silver** (filtered or flagged into a quarantine table). Non-blocking.
-- **Integrity / structural violations** (uniqueness, freshness, schema) → **fail-closed at the gate**: block publication to gold and alert.
-
-## Alternatives considered
-
-- **Fail-closed on everything** — a single bad row blocks all good data, and OpenAQ dirt is expected. Rejected.
-- **Quarantine everything** — hides genuine integrity regressions behind a quarantine table. Rejected.
+Tests that indicate a broken data contract, such as an unexpected schema change or a uniqueness failure after cleansing, block publication to gold and send an alert.
 
 ## Consequences
 
-- Silver needs models that separate/flag invalid rows (or use dbt `store_failures`).
-- Two classes of test with different severities; a quarantine table becomes an observable artifact.
-- Feeds the data-quality metrics gold model (a candidate future enhancement).
+- Silver records why a source record was excluded from gold.
+- Tests that block publication are explicitly configured as errors; record-level validation does not block the pipeline.
+- The boundary between record-level validation and publication-blocking checks is maintained with the dbt tests.

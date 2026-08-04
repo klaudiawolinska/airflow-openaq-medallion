@@ -1,23 +1,19 @@
-# ADR-0005: Orchestrate dbt with Cosmos (per-model tasks)
+# ADR-0005: Expose dbt models and tests as Airflow tasks
 
 - Status: Accepted
 - Date: 2026-07-17
 
 ## Context
 
-dbt models and tests should be orchestrated with granular retry and a readable graph, not as one opaque step.
+The transformation DAG is part of the project's observable orchestration surface. A single `dbt build` task reports the outcome of the full dbt invocation but does not expose the status or dependencies of individual models and tests in Airflow.
 
 ## Decision
 
-Run dbt through **astronomer-cosmos**, so each dbt model and test becomes a separate Airflow task.
-
-## Alternatives considered
-
-- **Single `BashOperator` running `dbt build`** — coarse retry (rerun everything on one failure) and an opaque graph. Rejected.
-- **dbt Cloud** — an external dependency and cost, outside the "native, self-contained" stance. Rejected.
+Use **astronomer-cosmos** to render dbt models and tests as Airflow tasks. The transform DAG therefore exposes the dbt dependency graph and the outcome of each node, rather than running `dbt build` as one opaque task.
 
 ## Consequences
 
-- Granular retry and selective runs; the dbt DAG is visible inside Airflow.
-- More task instances per run.
-- The Cosmos version must track Airflow 3 compatibility.
+- The Airflow UI shows the status and dependencies of individual dbt models and tests.
+- A failed dbt node can be retried or investigated without treating the full transformation as a single unit.
+- The number of Airflow task instances grows with the number of dbt nodes.
+- Cosmos must remain compatible with the Airflow runtime.

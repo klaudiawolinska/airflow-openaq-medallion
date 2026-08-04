@@ -5,19 +5,20 @@
 
 ## Context
 
-Bad records must not reach consumers. OpenAQ contains gaps, duplicates, and out-of-range values, so records must be audited before they are exposed.
+The gold layer is the consumer-facing dataset. OpenAQ data can contain gaps, duplicate observations, and measurements outside the accepted range, so publication to gold must be conditional on a data-quality audit.
 
 ## Decision
 
-Apply **Write-Audit-Publish**: write to silver (not exposed as gold), **audit** with dbt tests, and **publish** to gold only when the audit passes.
+The pipeline writes data to silver, runs the data-quality audit with dbt tests, and publishes data to gold only after the audit passes.
 
 ## Alternatives considered
 
-- **Transform straight to gold, then test** — bad data is visible to consumers before a failing test catches it. Rejected.
-- **External DQ tool (e.g. Great Expectations)** — dbt tests keep the gate inside the transformation layer with a single toolchain. Rejected for this project.
+- **Use an external data-quality tool** — dbt tests keep validation within the existing transformation toolchain. Rejected for this project.
+
+
 
 ## Consequences
 
-- Consumers never see unaudited data.
-- The gate is a real Airflow/Cosmos task that can fail and block publication.
-- Row-level handling of failures needs an explicit policy — see [ADR-0004](0004-wap-failure-handling.md).
+- Gold contains only data that has passed the audit.
+- The audit is an Airflow/Cosmos task; a failure prevents publication to gold.
+- The handling of individual invalid rows is defined in [ADR-0004](0004-wap-failure-handling.md).
