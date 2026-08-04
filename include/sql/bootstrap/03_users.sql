@@ -1,28 +1,9 @@
--- ============================================================================
--- 03_users.sql — service accounts (key-pair auth)
---
--- Last of the ordered bootstrap scripts. Creates the pipeline and CI service
--- users and binds each to its functional role.
---
--- Authentication is key-pair only: both users are TYPE = SERVICE,
--- for which Snowflake disables password / MFA sign-in. You MUST paste a real
--- RSA public key into AIRFLOW_USER's RSA_PUBLIC_KEY placeholder below — the
--- script fails on the placeholder by design (Snowflake rejects a malformed key),
--- which stops a keyless pipeline user from silently "working".
---
--- Idempotent: CREATE USER IF NOT EXISTS + ALTER USER ... SET converges defaults
--- and the key on re-run; GRANT ROLE is a no-op when already granted.
---
--- Role: USERADMIN — owns the users it creates, so it can ALTER them (incl. the
--- key) without SECURITYADMIN.
--- ============================================================================
+-- Creates the pipeline and CI service users. Run last as USERADMIN.
+-- Paste both public keys into the placeholders before running this script.
 
 USE ROLE USERADMIN;
 
--- ---------------------------------------------------------------------------
--- AIRFLOW_USER — the pipeline service account used by the snowflake_default
--- Airflow connection. Defaults mirror the connection extra in .env.example.
--- ---------------------------------------------------------------------------
+-- AIRFLOW_USER is the service account used by the default Airflow connection.
 CREATE USER IF NOT EXISTS AIRFLOW_USER
     TYPE              = SERVICE
     DEFAULT_ROLE      = OPENAQ_PIPELINE
@@ -39,9 +20,7 @@ ALTER USER AIRFLOW_USER SET
 
 GRANT ROLE OPENAQ_PIPELINE TO USER AIRFLOW_USER;
 
--- ---------------------------------------------------------------------------
--- OPENAQ_CI_USER — the CI service account for `dbt build` in the CI schema.
--- ---------------------------------------------------------------------------
+-- OPENAQ_CI_USER is the service account for `dbt build` in the CI schema.
 CREATE USER IF NOT EXISTS OPENAQ_CI_USER
     TYPE              = SERVICE
     DEFAULT_ROLE      = OPENAQ_CI

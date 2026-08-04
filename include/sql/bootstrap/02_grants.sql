@@ -1,22 +1,9 @@
--- ============================================================================
--- 02_grants.sql — least-privilege grants (existing + future objects)
---
--- Third of the ordered bootstrap scripts. Grants privileges to the roles from
--- 01_roles.sql. Future grants cover objects created after the bootstrap runs.
---
--- Idempotent: GRANT is inherently a no-op when the privilege already exists.
---
--- Role: SECURITYADMIN — holds MANAGE GRANTS, so it can grant privileges on
--- objects owned by SYSADMIN and set FUTURE grants, without ACCOUNTADMIN.
--- ============================================================================
+-- Grants roles access to current and future objects. Run after 01_roles.sql as
+-- SECURITYADMIN.
 
 USE ROLE SECURITYADMIN;
 
--- ---------------------------------------------------------------------------
--- OPENAQ_PIPELINE — usage on compute/database, read+write on the medallion
--- schemas (existing and future objects). No account-level or cross-schema
--- access; the negative-permission checks assert these boundaries.
--- ---------------------------------------------------------------------------
+-- OPENAQ_PIPELINE can access only the warehouse, database, and medallion schemas.
 GRANT USAGE ON WAREHOUSE OPENAQ_WH TO ROLE OPENAQ_PIPELINE;
 GRANT USAGE ON DATABASE  OPENAQ    TO ROLE OPENAQ_PIPELINE;
 
@@ -28,7 +15,7 @@ GRANT CREATE TABLE, CREATE VIEW ON SCHEMA OPENAQ.BRONZE TO ROLE OPENAQ_PIPELINE;
 GRANT CREATE TABLE, CREATE VIEW ON SCHEMA OPENAQ.SILVER TO ROLE OPENAQ_PIPELINE;
 GRANT CREATE TABLE, CREATE VIEW ON SCHEMA OPENAQ.GOLD   TO ROLE OPENAQ_PIPELINE;
 
--- DML on current + future tables in each medallion schema.
+-- Apply table access to existing and future objects.
 GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE
     ON ALL    TABLES IN SCHEMA OPENAQ.BRONZE TO ROLE OPENAQ_PIPELINE;
 GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE
@@ -42,7 +29,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE
 GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE
     ON FUTURE TABLES IN SCHEMA OPENAQ.GOLD   TO ROLE OPENAQ_PIPELINE;
 
--- SELECT on current + future views (dbt materializes some models as views).
+-- Views need explicit read access too.
 GRANT SELECT ON ALL    VIEWS IN SCHEMA OPENAQ.BRONZE TO ROLE OPENAQ_PIPELINE;
 GRANT SELECT ON FUTURE VIEWS IN SCHEMA OPENAQ.BRONZE TO ROLE OPENAQ_PIPELINE;
 GRANT SELECT ON ALL    VIEWS IN SCHEMA OPENAQ.SILVER TO ROLE OPENAQ_PIPELINE;
@@ -50,12 +37,7 @@ GRANT SELECT ON FUTURE VIEWS IN SCHEMA OPENAQ.SILVER TO ROLE OPENAQ_PIPELINE;
 GRANT SELECT ON ALL    VIEWS IN SCHEMA OPENAQ.GOLD   TO ROLE OPENAQ_PIPELINE;
 GRANT SELECT ON FUTURE VIEWS IN SCHEMA OPENAQ.GOLD   TO ROLE OPENAQ_PIPELINE;
 
--- ---------------------------------------------------------------------------
--- OPENAQ_CI — usage on compute/database and full rights inside the CI schema
--- ONLY. Deliberately no grant on BRONZE/SILVER/GOLD: that is what isolates CI
--- runs from the main tables. SYSADMIN keeps ownership of the schema;
--- objects dbt creates in CI are owned by OPENAQ_CI.
--- ---------------------------------------------------------------------------
+-- OPENAQ_CI has full access to the CI schema and no access to the main schemas.
 GRANT USAGE ON WAREHOUSE OPENAQ_WH TO ROLE OPENAQ_CI;
 GRANT USAGE ON DATABASE  OPENAQ    TO ROLE OPENAQ_CI;
 
@@ -65,9 +47,7 @@ GRANT ALL PRIVILEGES ON FUTURE TABLES IN SCHEMA OPENAQ.CI TO ROLE OPENAQ_CI;
 GRANT ALL PRIVILEGES ON ALL    VIEWS  IN SCHEMA OPENAQ.CI TO ROLE OPENAQ_CI;
 GRANT ALL PRIVILEGES ON FUTURE VIEWS  IN SCHEMA OPENAQ.CI TO ROLE OPENAQ_CI;
 
--- ---------------------------------------------------------------------------
--- OPENAQ_READ — optional read-only access to GOLD for consumers and Snowsight.
--- ---------------------------------------------------------------------------
+-- OPENAQ_READ has optional read-only access to GOLD.
 GRANT USAGE ON WAREHOUSE OPENAQ_WH TO ROLE OPENAQ_READ;
 GRANT USAGE ON DATABASE  OPENAQ    TO ROLE OPENAQ_READ;
 GRANT USAGE ON SCHEMA    OPENAQ.GOLD TO ROLE OPENAQ_READ;

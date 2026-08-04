@@ -1,14 +1,5 @@
--- ============================================================================
--- 99_teardown.sql — full teardown (DESTRUCTIVE)
---
--- Drops everything the bootstrap created: the database (and ALL its data), the
--- roles, the users, and the warehouse. Its purpose is a clean re-test of
--- idempotency and cleanup — NOT part of a normal run.
---
--- Idempotent: every DROP uses IF EXISTS.
---
--- Roles: USERADMIN owns the roles/users; SYSADMIN owns the database/warehouse.
--- ============================================================================
+-- Deletes every resource created by the bootstrap, including all database data.
+-- Use only to reset the Snowflake environment. Every statement is safe to re-run.
 
 USE ROLE USERADMIN;
 DROP USER IF EXISTS AIRFLOW_USER;

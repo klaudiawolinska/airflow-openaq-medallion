@@ -2,8 +2,6 @@
 
 Idempotent SQL that provisions the Snowflake side of the pipeline: one database with the medallion schemas, an XS warehouse, least-privilege roles, and key-pair service users. Run by an administrator to provision the Snowflake environment.
 
-For the design rationale, see [ADR-0016](../../../docs/adr/0016-snowflake-rbac.md) (RBAC), [ADR-0011](../../../docs/adr/0011-snowflake-warehouse.md) (warehouse), and [ADR-0018](../../../docs/adr/0018-snowflake-key-pair-auth.md) (key-pair authentication).
-
 ## What gets created
 
 | Object    | Name                                | Notes                                                 |
@@ -24,25 +22,30 @@ Each script starts with `USE ROLE` for the least-privileged system role required
 - `SECURITYADMIN` – grants
 - `USERADMIN` – roles and users
 
-## 1. Generate an RSA key pair for AIRFLOW_USER
+## 1. Generate RSA key pairs
 
-`AIRFLOW_USER` is configured as a `SERVICE` user and authenticates using an RSA key pair.
+`AIRFLOW_USER` and `OPENAQ_CI_USER` are `SERVICE` users and authenticate using RSA key pairs.
 
-Generate an unencrypted RSA private key (PKCS#8 format) for local development only:
+Generate unencrypted PKCS#8 private keys for local development only:
 
 ```bash
 mkdir -p include/keys                       # gitignored
-# Generate an RSA private key and convert it to the PKCS#8 format expected by Snowflake:
-openssl genrsa 2048 \
-  | openssl pkcs8 -topk8 -inform PEM -nocrypt \
-      -out include/keys/airflow_user_rsa.p8
-openssl rsa -in include/keys/airflow_user_rsa.p8 \
-      -pubout -out include/keys/airflow_user_rsa.pub
-# Extract the public key as a single line (without the PEM header/footer):
-grep -v -- '-----' include/keys/airflow_user_rsa.pub | tr -d '\n'; echo
+for user in airflow_user openaq_ci_user; do
+  openssl genrsa 2048 \
+    | openssl pkcs8 -topk8 -inform PEM -nocrypt \
+        -out "include/keys/${user}_rsa.p8"
+  openssl rsa -in "include/keys/${user}_rsa.p8" \
+        -pubout -out "include/keys/${user}_rsa.pub"
+done
 ```
 
-Copy the public key and paste into `03_users.sql` for `AIRFLOW_USER`.
+Extract each public key as one line and paste it into the matching placeholder in `03_users.sql`:
+
+```bash
+for user in airflow_user openaq_ci_user; do
+  grep -v -- '-----' "include/keys/${user}_rsa.pub" | tr -d '\n'; echo
+done
+```
 
 > For production or CI, use an **encrypted** private key (omit `-nocrypt` and provide a passphrase). Configure the passphrase using the `private_key_file_pwd` connection parameter.
 
