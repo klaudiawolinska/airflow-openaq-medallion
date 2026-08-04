@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-Short records of significant technical decisions: the context, the decision, alternatives considered, and consequences. One decision per file, Nygard-lite. A later ADR may supersede an earlier one (noted in **Status**).
+Short records of significant technical decisions: the context, the decision, and consequences. One decision per file, Nygard-lite. A later ADR may supersede an earlier one (noted in **Status**).
 
 Template: [0000-template.md](0000-template.md)
 

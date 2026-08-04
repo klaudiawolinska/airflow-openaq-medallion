@@ -43,6 +43,7 @@ Extract each public key as one line and paste it into the matching placeholder i
 
 ```bash
 for user in airflow_user openaq_ci_user; do
+  printf '%s: ' "$user"
   grep -v -- '-----' "include/keys/${user}_rsa.pub" | tr -d '\n'; echo
 done
 ```

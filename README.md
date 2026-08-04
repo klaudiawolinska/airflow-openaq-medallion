@@ -122,7 +122,9 @@ airflow-openaq-medallion/
 │   ├── sql/
 │   │   ├── bootstrap/            # idempotent Snowflake provisioning (RBAC + schemas)
 │   │   └── tests/               # negative-permission checks
-├── tests/test_dag_integrity.py
+├── tests/
+│   ├── test_dag_integrity.py
+│   └── test_openaq_client.py
 ├── docs/
 │   ├── PRD.md
 │   ├── source-data-profile.md    # measured profile of the OpenAQ source

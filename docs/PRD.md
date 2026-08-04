@@ -22,7 +22,7 @@ Measured source behavior, including provider liveness and publication lag, is do
 
 ## 1. Product goal
 
-- **(Portfolio)** Demonstrate production orchestration patterns in Airflow 3: incremental ingest, rate-limited API access, data-aware scheduling (Assets), granular dbt integration via Cosmos, a Write-Audit-Publish quality gate, and native observability.
+- **(Portfolio)** Demonstrate production orchestration patterns in Airflow 3: rolling-window ingest, rate-limited API access, data-aware scheduling (Assets), granular dbt integration via Cosmos, a Write-Audit-Publish quality gate, and native observability.
 - **(Domain)** Deliver a reliable, denoised air-quality dataset in the gold layer, ready for analytics.
 
 **Success =** a repository where (a) the local orchestration environment starts with a single command after a one-time credential setup, and (b) the pipeline passes green CI and publishes to gold only data that has passed the audit.
@@ -43,7 +43,7 @@ Measured source behavior, including provider liveness and publication lag, is do
 ### P1 — Operator / Data Engineer
 
 - As an operator I want to start the local orchestration environment with a single command after a one-time credential setup, so I can iterate without standing up individual components by hand.
-- As an operator I want incremental, date-parameterized loads with safe backfill, so reprocessing a window does not duplicate data.
+- As an operator I want date-parameterized, overwrite-per-window loads with safe backfill, so reprocessing a window does not duplicate data.
 - As an operator I want granular retry of a single dbt model/test, so one failure does not force re-running the whole transform (Cosmos).
 
 ### P2 — Technical reviewer
