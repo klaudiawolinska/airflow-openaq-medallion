@@ -1,23 +1,20 @@
-# ADR-0008: Bronze load — idempotent overwrite-per-window (not MERGE)
+# ADR-0008: Bronze load by overwrite window
 
 - Status: Accepted
 - Date: 2026-07-17
 
 ## Context
 
-Re-running a window must be idempotent, but bronze should remain a raw, append-style landing zone rather than an upserted, keyed table. A key-based MERGE at bronze would push silver concerns (deduplication, natural keys) into the raw layer.
+Each hourly ingest run re-fetches the preceding 24-hour interval. Consecutive runs therefore overlap. Retaining a separate copy of every response would grow bronze storage without improving the pipeline's ability to reprocess data.
 
 ## Decision
 
-Load bronze by **overwrite-per-window**: delete the target window's rows, then insert the current API response as raw `VARIANT` plus load metadata (load timestamp, request parameters). **No key-based MERGE at bronze.** Deduplication and merge-on-key live in silver/gold (dbt incremental).
+Before loading an ingest run, delete the bronze records for its target window and insert the current raw API response with load metadata.
 
-## Alternatives considered
-
-- **MERGE-on-key into bronze** — mixes silver logic into the raw layer and breaks the "raw as received" property. Rejected.
-- **Append-only with `load_ts`, dedupe in silver** — viable and gives fuller audit history, but bronze grows unbounded. Rejected for now in favour of bounded storage.
+Bronze therefore retains one current source representation for each ingest window, rather than a history of every retrieval.
 
 ## Consequences
 
-- Idempotent and bounded bronze; a re-run converges to the source's current state for that window.
-- All dedup/merge semantics are concentrated in silver/gold.
-- Late-arriving data for a window is picked up on re-run.
+- Re-running a window is idempotent.
+- A later run replaces the earlier bronze representation of the same window with the latest response from OpenAQ.
+- Deduplication for gold remains a silver-layer responsibility.

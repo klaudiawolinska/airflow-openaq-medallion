@@ -16,12 +16,12 @@ USE ROLE USERADMIN;
 CREATE ROLE IF NOT EXISTS OPENAQ_PIPELINE
     COMMENT = 'Least-privilege functional role for the Airflow pipeline';
 
--- CI (dbt build in GitHub Actions, M4) runs as this role, scoped to the CI
--- schema only so its runs never touch the main tables (ADR-0016).
+-- CI runs as this role, scoped to the CI schema so its runs never touch the
+-- main tables.
 CREATE ROLE IF NOT EXISTS OPENAQ_CI
     COMMENT = 'Isolated CI role — CI schema only, no access to bronze/silver/gold';
 
--- Optional read-only role for consumers / the Snowsight dashboard on GOLD (M11).
+-- Optional read-only role for consumers and the Snowsight dashboard on GOLD.
 CREATE ROLE IF NOT EXISTS OPENAQ_READ
     COMMENT = 'Read-only on GOLD for consumers / Snowsight (optional)';
 

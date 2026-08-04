@@ -5,7 +5,7 @@ Fast, runtime-free checks that every DAG in ``dags/``:
     reports as import errors during parsing);
   * defines at least one tag;
   * sets ``default_args['retries'] >= MIN_RETRIES`` so transient failures are
-    retried before an alert fires.
+    retried.
 
 Run inside the Astro runtime image in CI (``python -m pytest tests``), so the
 DagBag parses against the exact Airflow version we deploy.

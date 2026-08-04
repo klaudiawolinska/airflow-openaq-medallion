@@ -1,23 +1,17 @@
-# ADR-0006: Scheduled ingest + Asset-driven transform
+# ADR-0006: Scheduled ingestion and asset-triggered transformation
 
 - Status: Accepted
 - Date: 2026-07-17
 
 ## Context
 
-The transform should run when new data lands, but the head of the chain still needs a trigger — data-aware scheduling cannot start a chain from nothing.
+Ingestion needs its own schedule because it has no upstream event to trigger it. The transformation must run after ingestion has written data to bronze, without relying on a fixed time offset between two schedules.
 
 ## Decision
 
-The **ingest DAG runs on an hourly schedule** (cron/timetable). On success it **emits an Asset**; the **transform DAG is triggered by that Asset** (data-aware).
-
-## Alternatives considered
-
-- **Both DAGs on independent crons** — requires guessing an offset and risks races between ingest and transform. Rejected.
-- **A single DAG for ingest + transform** — couples them, losing independent scheduling and retry. Rejected.
+The ingest DAG runs hourly. A run that writes data to bronze emits an Airflow Asset. The transform DAG is scheduled on that Asset.
 
 ## Consequences
 
-- The transform runs exactly when new data is available, not on a guessed cron offset.
-- Ingest cadence is explicit; the two DAGs are linked by an Asset.
-- If ingest produces no data (0 records → no Asset), the transform does not run — an edge case to handle (stale-looking data).
+- The transform DAG runs after an ingest run has written data to bronze, rather than on an independent schedule.
+- An ingest run that writes no records does not emit the Asset, so it does not trigger a transform run.

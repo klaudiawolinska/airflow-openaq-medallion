@@ -14,14 +14,14 @@
 
 USE ROLE SYSADMIN;
 
--- Compute: a single XS warehouse with aggressive auto-suspend (ADR-0011). The
+-- Compute: a single XS warehouse with aggressive auto-suspend. The
 -- workload is intermittent hourly ELT, so cost efficiency beats a warm cache.
 CREATE WAREHOUSE IF NOT EXISTS OPENAQ_WH
     WAREHOUSE_SIZE      = 'XSMALL'
     AUTO_SUSPEND        = 60
     AUTO_RESUME         = TRUE
     INITIALLY_SUSPENDED = TRUE
-    COMMENT             = 'OpenAQ ELT compute — XS, 60s auto-suspend (ADR-0011)';
+    COMMENT             = 'OpenAQ ELT compute — XS, 60s auto-suspend';
 
 -- Converge settings if the warehouse already existed with different values
 -- (AUTO_SUSPEND / size drift). INITIALLY_SUSPENDED is a create-time-only option,
@@ -31,8 +31,8 @@ ALTER WAREHOUSE OPENAQ_WH SET
     AUTO_SUSPEND   = 60
     AUTO_RESUME    = TRUE;
 
--- One database with the three medallion schemas (ADR-0002) plus an isolated CI
--- schema so `dbt build` in CI never touches the main tables (ADR-0016).
+-- One database with the three medallion schemas plus an isolated CI schema
+-- schema so `dbt build` in CI never touches the main tables.
 CREATE DATABASE IF NOT EXISTS OPENAQ
     COMMENT = 'OpenAQ air-quality pipeline — bronze/silver/gold medallion';
 
@@ -48,9 +48,9 @@ CREATE SCHEMA IF NOT EXISTS OPENAQ.BRONZE WITH MANAGED ACCESS
 CREATE SCHEMA IF NOT EXISTS OPENAQ.SILVER WITH MANAGED ACCESS
     COMMENT = 'Cleaned, typed, deduplicated';
 CREATE SCHEMA IF NOT EXISTS OPENAQ.GOLD WITH MANAGED ACCESS
-    COMMENT = 'Business aggregates + station dimension (SCD2)';
+    COMMENT = 'Business aggregates + station dimension';
 CREATE SCHEMA IF NOT EXISTS OPENAQ.CI WITH MANAGED ACCESS
-    COMMENT = 'Isolated schema for dbt build in CI (ADR-0016)';
+    COMMENT = 'Isolated schema for dbt build in CI';
 
 -- CREATE ... IF NOT EXISTS silently skips schemas that already exist, so it would
 -- never retrofit managed access onto a database provisioned before this change.
