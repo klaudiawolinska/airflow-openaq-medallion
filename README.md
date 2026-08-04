@@ -146,7 +146,7 @@ airflow-openaq-medallion/
 
 ### Start locally
 
-**One-time Snowflake setup.** Generate RSA key pairs for `AIRFLOW_USER` and `OPENAQ_CI_USER`, then paste their public keys into `03_users.sql`. Run the idempotent bootstrap scripts once as an admin to provision the warehouse, database, medallion schemas, least-privilege roles, and service users. The exact commands are in `[include/sql/bootstrap/](include/sql/bootstrap/README.md)`. The pipeline then runs as the least-privilege role `OPENAQ_PIPELINE`.
+**One-time Snowflake setup.** Generate RSA key pairs for `AIRFLOW_USER` and `OPENAQ_CI_USER`, then paste their public keys into `03_users.sql`. Run the idempotent bootstrap scripts once as an admin to provision the warehouse, database, medallion schemas, least-privilege roles, and service users. The exact commands are in [include/sql/bootstrap/](include/sql/bootstrap/README.md). The pipeline then runs as the least-privilege role `OPENAQ_PIPELINE`.
 
 ```bash
 cp .env.example .env      # `account` as <org>-<account>, + OpenAQ;
