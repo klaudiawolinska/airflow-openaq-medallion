@@ -3,7 +3,6 @@
 
 USE ROLE SYSADMIN;
 
--- The hourly workload does not need a running warehouse between jobs.
 CREATE WAREHOUSE IF NOT EXISTS OPENAQ_WH
     WAREHOUSE_SIZE      = 'XSMALL'
     AUTO_SUSPEND        = 60
@@ -11,19 +10,18 @@ CREATE WAREHOUSE IF NOT EXISTS OPENAQ_WH
     INITIALLY_SUSPENDED = TRUE
     COMMENT             = 'OpenAQ ELT compute — XS, 60s auto-suspend';
 
--- `INITIALLY_SUSPENDED` applies only when the warehouse is created.
+-- Converge settings if the warehouse already existed with different config
 ALTER WAREHOUSE OPENAQ_WH SET
     WAREHOUSE_SIZE = 'XSMALL'
     AUTO_SUSPEND   = 60
     AUTO_RESUME    = TRUE;
 
--- The CI schema keeps `dbt build` separate from the main tables.
 CREATE DATABASE IF NOT EXISTS OPENAQ
     COMMENT = 'OpenAQ air-quality pipeline — bronze/silver/gold medallion';
 
--- Managed access keeps grants with the schema owner instead of object creators.
+-- Only the schema owner or a role with MANAGE GRANTS can grant object access.
 CREATE SCHEMA IF NOT EXISTS OPENAQ.BRONZE WITH MANAGED ACCESS
-    COMMENT = 'Raw as received (VARIANT); overwrite-per-window (ADR-0008)';
+    COMMENT = 'Raw as received (VARIANT); overwrite-per-window';
 CREATE SCHEMA IF NOT EXISTS OPENAQ.SILVER WITH MANAGED ACCESS
     COMMENT = 'Cleaned, typed, deduplicated';
 CREATE SCHEMA IF NOT EXISTS OPENAQ.GOLD WITH MANAGED ACCESS

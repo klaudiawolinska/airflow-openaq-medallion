@@ -13,9 +13,9 @@ CREATE ROLE IF NOT EXISTS OPENAQ_CI
 
 -- Optional read-only role for consumers and the Snowsight dashboard on GOLD.
 CREATE ROLE IF NOT EXISTS OPENAQ_READ
-    COMMENT = 'Read-only on GOLD for consumers / Snowsight (optional)';
+    COMMENT = 'Read-only on GOLD for consumers / Snowsight';
 
--- SYSADMIN can manage objects owned by these roles without using ACCOUNTADMIN.
+-- SYSADMIN can manage objects owned by these roles (standard Snowflake role hierarchy).
 GRANT ROLE OPENAQ_PIPELINE TO ROLE SYSADMIN;
 GRANT ROLE OPENAQ_CI       TO ROLE SYSADMIN;
 GRANT ROLE OPENAQ_READ     TO ROLE SYSADMIN;
