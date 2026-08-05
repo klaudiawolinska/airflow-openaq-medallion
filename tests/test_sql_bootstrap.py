@@ -38,14 +38,9 @@ def test_provision_scripts_present() -> None:
 def test_bronze_tables_are_provisioned() -> None:
     sql = (BOOTSTRAP_DIR / "04_bronze_tables.sql").read_text()
 
-    for table in (
-        "MEASUREMENTS",
-        "MEASUREMENT_STAGING",
-        "SENSOR_AUDIT_RESULTS",
-        "LOAD_SUMMARY",
-    ):
+    for table in ("MEASUREMENTS", "SENSOR_AUDIT_RESULTS", "LOAD_SUMMARY"):
         assert re.search(
-            rf"CREATE\s+(?:TRANSIENT\s+)?TABLE\s+IF\s+NOT\s+EXISTS\s+OPENAQ\.BRONZE\.{table}\b",
+            rf"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+OPENAQ\.BRONZE\.{table}\b",
             sql,
             re.IGNORECASE,
         ), f"04_bronze_tables.sql must provision OPENAQ.BRONZE.{table}"
