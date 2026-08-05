@@ -67,7 +67,8 @@ Key architectural decisions:
 
 ## Scope
 
-- **Geography:** all of Poland. Provider coverage and the current sensor inventory are in the [source data profile](docs/source-data-profile.md).
+- **Geography:** all of Poland.
+- **Providers:** EEA and AirGradient.
 - **Pollutants:** PM2.5, PM10, NO2, O3, SO2, CO, BC (black carbon).
 - **Cadence:** hourly.
 - **Ingest lookback:** a rolling 24-hour lookback per scheduled run; a one-time backfill of the full calendar year 2025 is planned to provide a complete year of history.
@@ -83,6 +84,12 @@ Key architectural decisions:
 - **Source client:** OpenAQ API v3.
 - **Transformations:** dbt-core and dbt-snowflake via `astronomer-cosmos` (M4).
 - **CI:** GitHub Actions runs lint and DAG-integrity tests; `dbt build` is added in M4.
+
+---
+
+## Source audit
+
+`openaq_audit` is a manual DAG that checks every target-parameter sensor discovered in Poland for a requested UTC window and stores one result per sensor in Snowflake. The audit run from 2026-04-06 22:00 UTC to 2026-08-04 22:00 UTC returned data only from EEA and AirGradient, so scheduled ingestion uses those providers.
 
 ---
 
@@ -119,7 +126,7 @@ airflow-openaq-medallion/
 │   │   ├── client.py             # pagination, retries, window parameterisation
 │   │   ├── ratelimit.py          # sliding-window pacing (60/min, 2000/h)
 │   │   ├── spike.py              # live check of the API assumptions
-│   │   └── profiling.py          # live profile: publication lag, provider liveness
+│   │   └── audit.py              # manual source audit
 │   ├── sql/
 │   │   ├── bootstrap/            # idempotent Snowflake provisioning (RBAC + schemas)
 │   │   └── tests/               # negative-permission checks
@@ -128,7 +135,6 @@ airflow-openaq-medallion/
 │   └── test_openaq_client.py
 ├── docs/
 │   ├── PRD.md
-│   ├── source-data-profile.md    # measured profile of the OpenAQ source
 │   └── adr/                      # architecture decision records
 ├── .github/workflows/ci.yml
 ├── Dockerfile                    # Astro runtime image
@@ -191,7 +197,7 @@ Rebuild the image after changing the `Dockerfile` or `requirements.txt`.
 
 ## Data & attribution
 
-Air-quality data is sourced from the [OpenAQ](https://openaq.org) API (v3). Provider coverage and sensor characteristics are recorded in the [source data profile](docs/source-data-profile.md). This data is subject to OpenAQ's and the originating providers' terms; it is **not** relicensed by this project, and no raw data is committed to the repository. A free OpenAQ API key is required and is supplied as a secret via `.env`.
+Air-quality data is sourced from the [OpenAQ](https://openaq.org) API (v3). This data is subject to OpenAQ's and the originating providers' terms; it is **not** relicensed by this project, and no raw data is committed to the repository. A free OpenAQ API key is required and is supplied as a secret via `.env`.
 
 ## License
 

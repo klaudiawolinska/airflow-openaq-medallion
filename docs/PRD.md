@@ -9,14 +9,12 @@
 | Topic | Requirement |
 | --- | --- |
 | Source | OpenAQ API v3. |
-| Geography | Whole of Poland, including reference-grade and low-cost sensors. |
+| Geography & providers | The manual audit covers all Polish providers. Scheduled ingestion uses AirGradient and EEA locations in Poland. |
 | Pollutants | PM2.5, PM10, NO2, O3, SO2, CO, BC. |
 | Cadence | Hourly. |
-| Ingest lookback | Each scheduled run covers the preceding 24 hours to account for source publication lag. See [the source data profile](source-data-profile.md). |
+| Ingest lookback | Each scheduled run covers the preceding 24 hours to account for source publication lag. |
 | Historical backfill | A one-time backfill covers the 2025 calendar year. |
 | Serving | A Snowsight dashboard reads the gold layer. |
-
-Measured source behavior, including provider liveness and publication lag, is documented in the [source data profile](source-data-profile.md).
 
 ---
 
@@ -73,8 +71,8 @@ Measured source behavior, including provider liveness and publication lag, is do
 | Security and secrets | Credentials remain outside code and access is limited to each workload's scope. |
 | Maintainability | Green CI is required before merge, with unit, data, and DAG-integrity checks. |
 | Cost and footprint | The project runs locally and uses a small warehouse footprint. |
-| Scalability | Ingestion stays within the OpenAQ request limit for the Poland-wide source. |
-| Documentation | The README, source data profile, and dbt documentation explain usage, source behavior, and lineage. |
+| Scalability | Ingestion stays within the OpenAQ request limit. |
+| Documentation | The README and dbt documentation explain usage, source behavior, and lineage. |
 
 ---
 

@@ -38,9 +38,14 @@ def test_provision_scripts_present() -> None:
 def test_bronze_tables_are_provisioned() -> None:
     sql = (BOOTSTRAP_DIR / "04_bronze_tables.sql").read_text()
 
-    for table in ("MEASUREMENTS", "SENSOR_AUDIT_RESULTS", "LOAD_SUMMARY"):
+    for table in (
+        "MEASUREMENTS",
+        "MEASUREMENT_STAGING",
+        "SENSOR_AUDIT_RESULTS",
+        "LOAD_SUMMARY",
+    ):
         assert re.search(
-            rf"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+OPENAQ\.BRONZE\.{table}\b",
+            rf"CREATE\s+(?:TRANSIENT\s+)?TABLE\s+IF\s+NOT\s+EXISTS\s+OPENAQ\.BRONZE\.{table}\b",
             sql,
             re.IGNORECASE,
         ), f"04_bronze_tables.sql must provision OPENAQ.BRONZE.{table}"
@@ -65,6 +70,31 @@ def test_bronze_time_and_change_columns_are_documented() -> None:
             sql,
             re.IGNORECASE,
         ), f"04_bronze_tables.sql must document OPENAQ.BRONZE.{table}.{column}"
+
+
+def test_bronze_staging_is_transient() -> None:
+    sql = (BOOTSTRAP_DIR / "04_bronze_tables.sql").read_text()
+
+    assert re.search(
+        r"CREATE\s+TRANSIENT\s+TABLE\s+IF\s+NOT\s+EXISTS\s+"
+        r"OPENAQ\.BRONZE\.MEASUREMENT_STAGING\b",
+        sql,
+        re.IGNORECASE,
+    )
+
+
+def test_bronze_refresh_is_a_caller_rights_stored_procedure() -> None:
+    sql = (BOOTSTRAP_DIR / "04_bronze_tables.sql").read_text()
+
+    assert re.search(
+        r"CREATE\s+OR\s+REPLACE\s+PROCEDURE\s+OPENAQ\.BRONZE\.REFRESH_STAGED_MEASUREMENTS",
+        sql,
+        re.IGNORECASE,
+    )
+    assert "LANGUAGE SQL" in sql
+    assert "EXECUTE AS CALLER" in sql
+    assert "BEGIN TRANSACTION" in sql
+    assert "ROLLBACK;" in sql
 
 
 @pytest.mark.parametrize("script", PROVISION_SCRIPTS, ids=lambda p: p.name)
