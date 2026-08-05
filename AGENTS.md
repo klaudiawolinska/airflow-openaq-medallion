@@ -55,6 +55,7 @@ Before committing Python changes, run Ruff in the Astro Runtime image: `docker b
 - Never commit, push, or open a pull request without being asked. A change of topic is not approval.
 - Never assume that creating commits is part of the requested task. Editing files does not imply permission to create Git history.
 - Use Conventional Commits for commit messages, with a type such as `feat:`, `fix:`, or `chore:`.
+- Name branches with the Conventional Commit type followed by a concise kebab-case description, such as `feat/bronze-ingest`, `fix/rate-limit-retry`, `docs/bootstrap-setup`, `test/audit-coverage`, `refactor/openaq-client`, or `chore/dependency-update`.
 
 ## Configuration files
 
