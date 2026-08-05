@@ -11,3 +11,4 @@ Template: [0000-template.md](0000-template.md)
 | [0005](0005-dbt-via-cosmos.md) | Expose dbt models and tests as Airflow tasks | Accepted |
 | [0006](0006-scheduling-model.md) | Scheduled ingestion and asset-triggered transformation | Accepted |
 | [0008](0008-bronze-load-strategy.md) | Bronze load by overwrite window | Accepted |
+| [0009](0009-scheduled-provider-scope.md) | Scheduled ingestion provider scope | Accepted |

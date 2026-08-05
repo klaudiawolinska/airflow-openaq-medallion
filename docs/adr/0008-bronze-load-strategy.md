@@ -9,12 +9,12 @@ Each hourly ingest run re-fetches the preceding 24-hour interval. Consecutive ru
 
 ## Decision
 
-Before loading an ingest run, delete the bronze records for its target window and insert the current raw API response with load metadata.
+An ingest run writes its raw API response to a transient staging table under its load ID. A stored procedure compares that staging set with bronze for the target window. When the sets differ, one Snowflake transaction replaces the bronze window with the staged rows.
 
-Bronze therefore retains one current source representation for each ingest window, rather than a history of every retrieval.
+Bronze retains one current source representation for each ingest window, rather than a history of every retrieval.
 
 ## Consequences
 
 - Re-running a window is idempotent.
-- A later run replaces the earlier bronze representation of the same window with the latest response from OpenAQ.
+- Bronze is never observed after its window has been deleted but before the replacement rows are written.
 - Deduplication for gold remains a silver-layer responsibility.

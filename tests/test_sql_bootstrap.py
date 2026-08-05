@@ -67,6 +67,31 @@ def test_bronze_time_and_change_columns_are_documented() -> None:
         ), f"04_bronze_tables.sql must document OPENAQ.BRONZE.{table}.{column}"
 
 
+def test_bronze_staging_is_transient() -> None:
+    sql = (BOOTSTRAP_DIR / "04_bronze_tables.sql").read_text()
+
+    assert re.search(
+        r"CREATE\s+TRANSIENT\s+TABLE\s+IF\s+NOT\s+EXISTS\s+"
+        r"OPENAQ\.BRONZE\.MEASUREMENT_STAGING\b",
+        sql,
+        re.IGNORECASE,
+    )
+
+
+def test_bronze_refresh_is_a_caller_rights_stored_procedure() -> None:
+    sql = (BOOTSTRAP_DIR / "04_bronze_tables.sql").read_text()
+
+    assert re.search(
+        r"CREATE\s+OR\s+REPLACE\s+PROCEDURE\s+OPENAQ\.BRONZE\.REFRESH_STAGED_MEASUREMENTS",
+        sql,
+        re.IGNORECASE,
+    )
+    assert "LANGUAGE SQL" in sql
+    assert "EXECUTE AS CALLER" in sql
+    assert "BEGIN TRANSACTION" in sql
+    assert "ROLLBACK;" in sql
+
+
 @pytest.mark.parametrize("script", PROVISION_SCRIPTS, ids=lambda p: p.name)
 def test_script_non_empty(script: Path) -> None:
     assert script.read_text().strip(), f"{script.name} is empty"

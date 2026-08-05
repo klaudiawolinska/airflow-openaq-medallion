@@ -49,6 +49,9 @@ TARGET_PARAMETERS: frozenset[str] = frozenset(
     {"pm25", "pm10", "no2", "o3", "so2", "co", "bc"}
 )
 
+# 66 is AirGradient and 70 is EEA.
+INGEST_PROVIDER_IDS: frozenset[int] = frozenset({66, 70})
+
 # Safety limit for pagination.
 DEFAULT_MAX_PAGES = 1000
 
