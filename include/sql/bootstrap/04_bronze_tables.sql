@@ -43,6 +43,7 @@ DECLARE
     changed_record_count NUMBER;
     absent_record_count NUMBER;
     oldest_new_measurement_at TIMESTAMP_TZ;
+    bronze_changed BOOLEAN;
 BEGIN
     BEGIN TRANSACTION;
 
@@ -75,45 +76,46 @@ BEGIN
           AND MEASUREMENT_PERIOD_FROM_UTC < :REFRESH_TO
     )
     SELECT
-        (
-            SELECT COUNT(*)
-            FROM staged AS staged_row
-            LEFT JOIN bronze AS bronze_row
-                ON bronze_row.SENSOR_ID = staged_row.SENSOR_ID
-                AND bronze_row.PARAMETER_ID = staged_row.PARAMETER_ID
-                AND bronze_row.MEASUREMENT_PERIOD_FROM_UTC = staged_row.MEASUREMENT_PERIOD_FROM_UTC
-            WHERE bronze_row.SENSOR_ID IS NULL
+        COALESCE(
+            COUNT_IF(
+                staged_row.SENSOR_ID IS NOT NULL
+                AND bronze_row.SENSOR_ID IS NULL
+            ),
+            0
         ),
-        (
-            SELECT COUNT(*)
-            FROM staged AS staged_row
-            INNER JOIN bronze AS bronze_row
-                ON bronze_row.SENSOR_ID = staged_row.SENSOR_ID
-                AND bronze_row.PARAMETER_ID = staged_row.PARAMETER_ID
-                AND bronze_row.MEASUREMENT_PERIOD_FROM_UTC = staged_row.MEASUREMENT_PERIOD_FROM_UTC
-            WHERE staged_row.RAW_MEASUREMENT IS DISTINCT FROM bronze_row.RAW_MEASUREMENT
+        COALESCE(
+            COUNT_IF(
+                staged_row.SENSOR_ID IS NOT NULL
+                AND bronze_row.SENSOR_ID IS NOT NULL
+                AND staged_row.RAW_MEASUREMENT IS DISTINCT FROM bronze_row.RAW_MEASUREMENT
+            ),
+            0
         ),
-        (
-            SELECT COUNT(*)
-            FROM bronze AS bronze_row
-            LEFT JOIN staged AS staged_row
-                ON staged_row.SENSOR_ID = bronze_row.SENSOR_ID
-                AND staged_row.PARAMETER_ID = bronze_row.PARAMETER_ID
-                AND staged_row.MEASUREMENT_PERIOD_FROM_UTC = bronze_row.MEASUREMENT_PERIOD_FROM_UTC
-            WHERE staged_row.SENSOR_ID IS NULL
+        COALESCE(
+            COUNT_IF(
+                staged_row.SENSOR_ID IS NULL
+                AND bronze_row.SENSOR_ID IS NOT NULL
+            ),
+            0
         ),
-        (
-            SELECT MIN(staged_row.MEASUREMENT_PERIOD_FROM_UTC)
-            FROM staged AS staged_row
-            LEFT JOIN bronze AS bronze_row
-                ON bronze_row.SENSOR_ID = staged_row.SENSOR_ID
-                AND bronze_row.PARAMETER_ID = staged_row.PARAMETER_ID
-                AND bronze_row.MEASUREMENT_PERIOD_FROM_UTC = staged_row.MEASUREMENT_PERIOD_FROM_UTC
-            WHERE bronze_row.SENSOR_ID IS NULL
+        MIN(
+            IFF(
+                staged_row.SENSOR_ID IS NOT NULL
+                AND bronze_row.SENSOR_ID IS NULL,
+                staged_row.MEASUREMENT_PERIOD_FROM_UTC,
+                NULL
+            )
         )
-    INTO :new_record_count, :changed_record_count, :absent_record_count, :oldest_new_measurement_at;
+    INTO :new_record_count, :changed_record_count, :absent_record_count, :oldest_new_measurement_at
+    FROM staged AS staged_row
+    FULL OUTER JOIN bronze AS bronze_row
+        ON bronze_row.SENSOR_ID = staged_row.SENSOR_ID
+        AND bronze_row.PARAMETER_ID = staged_row.PARAMETER_ID
+        AND bronze_row.MEASUREMENT_PERIOD_FROM_UTC = staged_row.MEASUREMENT_PERIOD_FROM_UTC;
 
-    IF (new_record_count + changed_record_count + absent_record_count) > 0 THEN
+    bronze_changed := new_record_count + changed_record_count + absent_record_count > 0;
+
+    IF (bronze_changed) THEN
         DELETE FROM OPENAQ.BRONZE.MEASUREMENTS
         WHERE MEASUREMENT_PERIOD_FROM_UTC >= :REFRESH_FROM
           AND MEASUREMENT_PERIOD_FROM_UTC < :REFRESH_TO;
@@ -147,7 +149,7 @@ BEGIN
         'changed_record_count', changed_record_count,
         'absent_record_count', absent_record_count,
         'oldest_new_measurement_at', oldest_new_measurement_at,
-        'bronze_changed', (new_record_count + changed_record_count + absent_record_count) > 0
+        'bronze_changed', bronze_changed
     );
 EXCEPTION
     WHEN OTHER THEN

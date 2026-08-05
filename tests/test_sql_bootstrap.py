@@ -92,6 +92,25 @@ def test_bronze_refresh_is_a_caller_rights_stored_procedure() -> None:
     assert "ROLLBACK;" in sql
 
 
+def test_bronze_refresh_uses_one_change_flag_for_replacement_and_result() -> None:
+    sql = (BOOTSTRAP_DIR / "04_bronze_tables.sql").read_text()
+
+    assert "bronze_changed BOOLEAN;" in sql
+    assert re.search(
+        r"bronze_changed\s*:=\s*"
+        r"new_record_count\s*\+\s*changed_record_count\s*\+\s*"
+        r"absent_record_count\s*>\s*0\s*;",
+        sql,
+        re.IGNORECASE,
+    )
+    assert re.search(r"IF\s*\(\s*bronze_changed\s*\)\s*THEN", sql, re.IGNORECASE)
+    assert re.search(
+        r"'bronze_changed'\s*,\s*bronze_changed",
+        sql,
+        re.IGNORECASE,
+    )
+
+
 @pytest.mark.parametrize("script", PROVISION_SCRIPTS, ids=lambda p: p.name)
 def test_script_non_empty(script: Path) -> None:
     assert script.read_text().strip(), f"{script.name} is empty"

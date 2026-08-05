@@ -41,12 +41,19 @@ INSERT INTO OPENAQ.BRONZE.MEASUREMENT_STAGING (
     PARAMETER_ID,
     MEASUREMENT_PERIOD_FROM_UTC,
     RAW_MEASUREMENT
-) VALUES (
+)
+SELECT
+    column1,
+    column2,
+    column3,
+    column4,
+    PARSE_JSON(column5)
+FROM VALUES (
     %(load_id)s,
     %(sensor_id)s,
     %(parameter_id)s,
     %(measurement_period_from_utc)s,
-    PARSE_JSON(%(raw_measurement)s)
+    %(raw_measurement)s
 )
 """
 
@@ -55,6 +62,58 @@ CALL OPENAQ.BRONZE.REFRESH_STAGED_MEASUREMENTS(
     %(load_id)s,
     %(refresh_from)s,
     %(refresh_to)s
+)
+"""
+
+LOAD_SUMMARY_MERGE_SQL = """
+MERGE INTO OPENAQ.BRONZE.LOAD_SUMMARY AS target
+USING (
+    SELECT
+        %(load_id)s AS LOAD_ID,
+        %(load_type)s AS LOAD_TYPE,
+        %(refresh_from)s AS REFRESH_FROM_UTC,
+        %(refresh_to)s AS REFRESH_TO_UTC,
+        %(api_record_count)s AS API_RECORD_COUNT,
+        %(new_record_count)s AS NEW_RECORD_COUNT,
+        %(changed_record_count)s AS CHANGED_RECORD_COUNT,
+        %(absent_record_count)s AS ABSENT_RECORD_COUNT,
+        %(oldest_new_measurement_at)s AS OLDEST_NEW_MEASUREMENT_AT,
+        %(bronze_changed)s AS BRONZE_CHANGED
+) AS source
+ON target.LOAD_ID = source.LOAD_ID
+WHEN MATCHED THEN UPDATE SET
+    LOAD_TYPE = source.LOAD_TYPE,
+    REFRESH_FROM_UTC = source.REFRESH_FROM_UTC,
+    REFRESH_TO_UTC = source.REFRESH_TO_UTC,
+    API_RECORD_COUNT = source.API_RECORD_COUNT,
+    NEW_RECORD_COUNT = source.NEW_RECORD_COUNT,
+    CHANGED_RECORD_COUNT = source.CHANGED_RECORD_COUNT,
+    ABSENT_RECORD_COUNT = source.ABSENT_RECORD_COUNT,
+    OLDEST_NEW_MEASUREMENT_AT = source.OLDEST_NEW_MEASUREMENT_AT,
+    BRONZE_CHANGED = source.BRONZE_CHANGED,
+    COMPLETED_AT = CURRENT_TIMESTAMP()
+WHEN NOT MATCHED THEN INSERT (
+    LOAD_ID,
+    LOAD_TYPE,
+    REFRESH_FROM_UTC,
+    REFRESH_TO_UTC,
+    API_RECORD_COUNT,
+    NEW_RECORD_COUNT,
+    CHANGED_RECORD_COUNT,
+    ABSENT_RECORD_COUNT,
+    OLDEST_NEW_MEASUREMENT_AT,
+    BRONZE_CHANGED
+) VALUES (
+    source.LOAD_ID,
+    source.LOAD_TYPE,
+    source.REFRESH_FROM_UTC,
+    source.REFRESH_TO_UTC,
+    source.API_RECORD_COUNT,
+    source.NEW_RECORD_COUNT,
+    source.CHANGED_RECORD_COUNT,
+    source.ABSENT_RECORD_COUNT,
+    source.OLDEST_NEW_MEASUREMENT_AT,
+    source.BRONZE_CHANGED
 )
 """
 
@@ -140,6 +199,21 @@ class RefreshResult:
             )
         )
 
+    def xcom_value(self) -> dict[str, object]:
+        """Return a JSON-serialisable representation for task hand-off."""
+        oldest_new_measurement_at = self.oldest_new_measurement_at
+        return {
+            "new_record_count": self.new_record_count,
+            "changed_record_count": self.changed_record_count,
+            "absent_record_count": self.absent_record_count,
+            "oldest_new_measurement_at": (
+                oldest_new_measurement_at.isoformat()
+                if oldest_new_measurement_at is not None
+                else None
+            ),
+            "bronze_changed": self.bronze_changed,
+        }
+
 
 def stage_measurements(
     connection: Connection, *, load_id: str, measurements: list[StagedMeasurement]
@@ -179,10 +253,50 @@ def refresh_window(
     return RefreshResult.from_snowflake(row[0])
 
 
+def record_load_summary(
+    connection: Connection,
+    *,
+    load_id: str,
+    load_type: str,
+    refresh_from: datetime,
+    refresh_to: datetime,
+    api_record_count: int,
+    refresh_result: RefreshResult,
+) -> None:
+    """Upsert the durable summary for one completed bronze refresh."""
+    _require_load_id(load_id)
+    if not isinstance(load_type, str) or not load_type:
+        raise ValueError("load_type must be a non-empty string")
+    _validate_refresh_window(refresh_from, refresh_to)
+    _require_non_negative_integer(api_record_count, argument="api_record_count")
+    parameters = {
+        "load_id": load_id,
+        "load_type": load_type,
+        "refresh_from": refresh_from,
+        "refresh_to": refresh_to,
+        "api_record_count": api_record_count,
+        "new_record_count": refresh_result.new_record_count,
+        "changed_record_count": refresh_result.changed_record_count,
+        "absent_record_count": refresh_result.absent_record_count,
+        "oldest_new_measurement_at": refresh_result.oldest_new_measurement_at,
+        "bronze_changed": refresh_result.bronze_changed,
+    }
+    with connection.cursor() as cursor:
+        cursor.execute(LOAD_SUMMARY_MERGE_SQL, parameters)
+    connection.commit()
+
+
 def _require_integer(value: object, *, argument: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError(f"{argument} must be an integer")
     return value
+
+
+def _require_non_negative_integer(value: object, *, argument: str) -> int:
+    result = _require_integer(value, argument=argument)
+    if result < 0:
+        raise ValueError(f"{argument} must not be negative")
+    return result
 
 
 def _require_load_id(load_id: str) -> None:
@@ -211,6 +325,6 @@ def _result_timestamp(value: object) -> datetime | None:
     if not isinstance(value, str):
         raise RuntimeError(f"Snowflake returned an invalid timestamp: {value!r}")
     try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return datetime.fromisoformat(value.replace(" Z", "+00:00").replace("Z", "+00:00"))
     except ValueError as exc:
         raise RuntimeError(f"Snowflake returned an invalid timestamp: {value!r}") from exc
