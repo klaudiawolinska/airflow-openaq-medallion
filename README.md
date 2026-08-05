@@ -57,7 +57,7 @@ Key architectural decisions:
 | WAP gate via dbt tests                                 | Data reaches gold only after a quality audit; OpenAQ has gaps, duplicates, and out-of-range values          | [0003](docs/adr/0003-wap-quality-gate.md), [0004](docs/adr/0004-wap-failure-handling.md) |
 | dbt models and tests as Airflow tasks                  | Airflow exposes the status and dependencies of individual dbt nodes                                         | [0005](docs/adr/0005-dbt-via-cosmos.md)                                                  |
 | Isolated dbt environment                               | Cosmos runs dbt in `LOCAL` mode from a dedicated virtualenv, keeping dbt dependencies separate from Airflow | —                                                                                        |
-| Scheduled ingestion and asset-triggered transformation | The transform runs after ingestion writes data to bronze, not on a guessed cron offset                      | [0006](docs/adr/0006-scheduling-model.md)                                                |
+| Scheduled ingestion and asset-triggered transformation | The transform runs after ingestion writes data to bronze                             | [0006](docs/adr/0006-scheduling-model.md)                                                |
 | Bronze load by overwrite window                        | Re-fetching the 24-hour window refreshes bronze without retaining duplicate retrievals                      | [0008](docs/adr/0008-bronze-load-strategy.md)                                            |
 
 
@@ -92,6 +92,7 @@ Key architectural decisions:
 
 - **Idempotency** — bronze will use overwrite-per-window and silver/gold dbt incremental models, so reprocessing does not duplicate data.
 - **Ingest** — one task will fetch sensors sequentially within the OpenAQ request limit.
+- **Asset emission** — ingest will emit an Asset when the bronze contents for the refreshed window change through added, modified, or removed measurements.
 - **Backfill** — date-parameterized loads will support the 2025 backfill in rate-limit-aware chunks.
 - **Data quality** — the WAP gate will publish to gold only after dbt tests pass; invalid source records will remain available for inspection in silver, while data-contract failures will block publication and trigger an alert.
 - **Secrets** — connections and the OpenAQ key live outside code (`.env` or a Secrets Backend); the repository ships only `.env.example`.

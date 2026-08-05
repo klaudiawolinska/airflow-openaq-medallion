@@ -59,6 +59,7 @@ Run the following scripts in order using Snowsight or `snowsql`:
 01_roles.sql                # functional roles
 02_grants.sql               # least-privilege grants (+ future grants)
 03_users.sql                # service users and authentication
+04_bronze_tables.sql        # bronze ingestion, audit, and reconciliation tables
 ```
 
 The bootstrap scripts are idempotent and can be run multiple times safely.

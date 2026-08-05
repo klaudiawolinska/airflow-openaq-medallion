@@ -118,12 +118,21 @@ def measurement(
     }
 
 
-def location(*, location_id: int, name: str = "Kraków-Aleje") -> dict[str, Any]:
+def location(
+    *,
+    location_id: int,
+    name: str = "Kraków-Aleje",
+    provider_id: int = 214,
+    provider_name: str = "Poland",
+    sensors: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     """Return a sample location payload."""
     return {
         "id": location_id,
         "name": name,
         "country": {"id": 1, "code": "PL", "name": "Poland"},
+        "provider": {"id": provider_id, "name": provider_name},
+        "sensors": sensors or [],
     }
 
 
