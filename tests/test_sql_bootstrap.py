@@ -97,6 +97,20 @@ def test_bronze_refresh_is_a_caller_rights_stored_procedure() -> None:
     assert "ROLLBACK;" in sql
 
 
+def test_bronze_refresh_rejects_duplicate_staged_identities() -> None:
+    sql = (BOOTSTRAP_DIR / "04_bronze_tables.sql").read_text()
+
+    assert re.search(
+        r"SELECT\s+SENSOR_ID,\s+PARAMETER_ID,\s+MEASUREMENT_PERIOD_FROM_UTC\s+"
+        r"FROM\s+OPENAQ\.BRONZE\.MEASUREMENT_STAGING.*?"
+        r"GROUP\s+BY\s+SENSOR_ID,\s+PARAMETER_ID,\s+MEASUREMENT_PERIOD_FROM_UTC\s+"
+        r"HAVING\s+COUNT\(\*\)\s*>\s*1",
+        sql,
+        re.IGNORECASE | re.DOTALL,
+    )
+    assert "RAISE duplicate_staged_measurements;" in sql
+
+
 @pytest.mark.parametrize("script", PROVISION_SCRIPTS, ids=lambda p: p.name)
 def test_script_non_empty(script: Path) -> None:
     assert script.read_text().strip(), f"{script.name} is empty"

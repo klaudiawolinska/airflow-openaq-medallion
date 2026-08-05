@@ -37,12 +37,30 @@ EXECUTE AS CALLER
 AS
 $$
 DECLARE
+    duplicate_staged_measurements EXCEPTION (-20001, 'Staged measurements contain duplicate source identities.');
+    duplicate_staged_measurement_count NUMBER;
     new_record_count NUMBER;
     changed_record_count NUMBER;
     absent_record_count NUMBER;
     oldest_new_measurement_at TIMESTAMP_TZ;
 BEGIN
     BEGIN TRANSACTION;
+
+    SELECT COUNT(*)
+    INTO :duplicate_staged_measurement_count
+    FROM (
+        SELECT SENSOR_ID, PARAMETER_ID, MEASUREMENT_PERIOD_FROM_UTC
+        FROM OPENAQ.BRONZE.MEASUREMENT_STAGING
+        WHERE LOAD_ID = :LOAD_ID
+          AND MEASUREMENT_PERIOD_FROM_UTC >= :REFRESH_FROM
+          AND MEASUREMENT_PERIOD_FROM_UTC < :REFRESH_TO
+        GROUP BY SENSOR_ID, PARAMETER_ID, MEASUREMENT_PERIOD_FROM_UTC
+        HAVING COUNT(*) > 1
+    ) AS duplicate_staged_identities;
+
+    IF (duplicate_staged_measurement_count > 0) THEN
+        RAISE duplicate_staged_measurements;
+    END IF;
 
     WITH staged AS (
         SELECT SENSOR_ID, PARAMETER_ID, MEASUREMENT_PERIOD_FROM_UTC, RAW_MEASUREMENT
