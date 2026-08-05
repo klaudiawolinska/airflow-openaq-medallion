@@ -40,7 +40,7 @@ def _run_identity_and_window(context: dict[str, Any]) -> tuple[str, datetime, da
 
 @dag(
     dag_id="openaq_ingest",
-    schedule=None,
+    schedule="@hourly",
     start_date=datetime(2026, 1, 1, tzinfo=UTC),
     catchup=False,
     max_active_runs=1,

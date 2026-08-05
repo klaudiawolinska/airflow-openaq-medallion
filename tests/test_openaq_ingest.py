@@ -233,6 +233,7 @@ def test_ingest_dag_has_the_required_three_task_chain() -> None:
 
     dag = openaq_ingest()
 
+    assert dag.schedule == "@hourly"
     assert set(dag.task_dict) == {
         "fetch_api_and_stage",
         "refresh_bronze",

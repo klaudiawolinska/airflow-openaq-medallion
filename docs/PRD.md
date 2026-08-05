@@ -122,3 +122,4 @@ Also to confirm: whether the "single-command start" stays a success criterion or
 - **Statistical anomaly detection** on measurements as an advanced audit step.
 - **Operational lineage** through OpenLineage.
 - **Parameterized DAG** for ad-hoc backfill of an arbitrary window/location.
+- **Historical reconciliation:** manually compare an arbitrary closed UTC window with the current OpenAQ response and report differences.
