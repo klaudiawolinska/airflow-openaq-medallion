@@ -47,6 +47,7 @@ def test_bronze_tables_are_provisioned() -> None:
 
 
 def test_bronze_time_and_change_columns_are_documented() -> None:
+    """Verify that required bronze-table time and change-tracking columns have comments in the bootstrap SQL."""
     sql = (BOOTSTRAP_DIR / "04_bronze_tables.sql").read_text()
 
     for table, column in (

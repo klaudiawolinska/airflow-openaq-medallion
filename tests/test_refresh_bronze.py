@@ -21,6 +21,7 @@ REFRESH_TO = datetime(2026, 1, 2, tzinfo=UTC)
 
 class FakeCursor:
     def __init__(self, refresh_result: object | None) -> None:
+        """Initialize a fake database cursor with a configurable refresh result and empty execution records."""
         self._refresh_result = refresh_result
         self.executions: list[tuple[str, dict[str, object] | None]] = []
         self.bulk_sql: str | None = None
@@ -33,9 +34,22 @@ class FakeCursor:
         return None
 
     def execute(self, sql: str, params: dict[str, object] | None = None) -> None:
+        """
+        Record a SQL statement and its parameters.
+        
+        Parameters:
+        	sql (str): SQL statement to record.
+        	params (dict[str, object] | None): Parameters supplied to the statement.
+        """
         self.executions.append((sql, params))
 
     def executemany(self, sql: str, rows: list[dict[str, object]]) -> None:
+        """Records a bulk SQL statement and its rows for later inspection.
+        
+        Parameters:
+        	sql (str): SQL statement executed for the bulk operation.
+        	rows (list[dict[str, object]]): Rows supplied to the bulk operation.
+        """
         self.bulk_sql = sql
         self.bulk_rows = rows
 
@@ -52,6 +66,7 @@ class FakeConnection:
         return self.cursor_instance
 
     def commit(self) -> None:
+        """Mark the fake connection as committed."""
         self.committed = True
 
 

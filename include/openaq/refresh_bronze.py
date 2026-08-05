@@ -10,21 +10,55 @@ from typing import Any, Protocol
 class Cursor(Protocol):
     """Database cursor operations used by this module."""
 
-    def __enter__(self) -> "Cursor": ...
+    def __enter__(self) -> "Cursor": """Provide the cursor for use within a context manager.
 
-    def __exit__(self, *_: object) -> None: ...
+Returns:
+    Cursor: The cursor instance.
+"""
+...
 
-    def execute(self, sql: str, params: dict[str, object] | None = None) -> None: ...
+    def __exit__(self, *_: object) -> None: """
+Exit the database cursor context.
+"""
+...
 
-    def executemany(self, sql: str, rows: list[dict[str, object]]) -> None: ...
+    def execute(self, sql: str, params: dict[str, object] | None = None) -> None: """
+Execute a SQL statement with optional named parameters.
 
-    def fetchone(self) -> tuple[object, ...] | None: ...
+Parameters:
+	sql (str): SQL statement to execute
+	params (dict[str, object] | None): Optional named parameters for the statement
+"""
+...
+
+    def executemany(self, sql: str, rows: list[dict[str, object]]) -> None: """
+Execute a SQL statement for multiple parameter mappings.
+
+Parameters:
+	sql (str): The SQL statement to execute.
+	rows (list[dict[str, object]]): Parameter mappings for each execution.
+"""
+...
+
+    def fetchone(self) -> tuple[object, ...] | None: """
+Fetch the next row from the current result set.
+
+Returns:
+    tuple[object, ...] | None: The next row, or `None` when no row is available.
+"""
+...
 
 
 class Connection(Protocol):
     """Database connection operations used by this module."""
 
-    def cursor(self) -> Cursor: ...
+    def cursor(self) -> Cursor: """
+Provide a cursor for executing database operations.
+
+Returns:
+    Cursor: A database cursor.
+"""
+...
 
     def commit(self) -> None: ...
 
@@ -70,7 +104,19 @@ class StagedMeasurement:
 
     @classmethod
     def from_api(cls, sensor_id: int, raw_measurement: dict[str, Any]) -> "StagedMeasurement":
-        """Extract the bronze identity fields from an OpenAQ measurement response."""
+        """
+        Create a staged measurement from an OpenAQ measurement response.
+        
+        Parameters:
+        	sensor_id (int): Sensor identifier associated with the measurement.
+        	raw_measurement (dict[str, Any]): Measurement payload containing the parameter identifier and UTC start time.
+        
+        Returns:
+        	StagedMeasurement: Measurement with validated identity fields and the original payload.
+        
+        Raises:
+        	ValueError: If the sensor ID, parameter ID, or UTC start time is invalid or missing.
+        """
         parameter = raw_measurement.get("parameter")
         period = raw_measurement.get("period")
         datetime_from = period.get("datetimeFrom") if isinstance(period, dict) else None
@@ -111,7 +157,19 @@ class RefreshResult:
 
     @classmethod
     def from_snowflake(cls, value: object) -> "RefreshResult":
-        """Build a diff from the object returned by the refresh procedure."""
+        """
+        Parse a Snowflake refresh procedure result into a refresh summary.
+        
+        Parameters:
+            value (object): A mapping or JSON string containing refresh counts and the
+                oldest new measurement timestamp.
+        
+        Returns:
+            RefreshResult: The parsed refresh summary.
+        
+        Raises:
+            RuntimeError: If the value is malformed or contains invalid result fields.
+        """
         if isinstance(value, str):
             try:
                 value = json.loads(value)
@@ -132,6 +190,11 @@ class RefreshResult:
 
     @property
     def bronze_changed(self) -> bool:
+        """Indicate whether the refresh produced any bronze record changes.
+        
+        Returns:
+            bool: `true` if any records were added, changed, or marked absent, `false` otherwise.
+        """
         return any(
             (
                 self.new_record_count,
@@ -163,7 +226,21 @@ def refresh_window(
     refresh_from: datetime,
     refresh_to: datetime,
 ) -> RefreshResult:
-    """Call the procedure that atomically reconciles one staged time window."""
+    """
+    Reconcile staged measurements within a validated time window.
+    
+    Parameters:
+    	load_id (str): Identifier for the staging load.
+    	refresh_from (datetime): Timezone-aware start of the refresh window.
+    	refresh_to (datetime): Timezone-aware end of the refresh window.
+    
+    Returns:
+    	RefreshResult: Counts of new, changed, and absent records, plus the oldest new measurement timestamp.
+    
+    Raises:
+    	RuntimeError: If the refresh procedure returns no result.
+    	ValueError: If the load ID or refresh window is invalid.
+    """
     _require_load_id(load_id)
     _validate_refresh_window(refresh_from, refresh_to)
     parameters = {
@@ -180,17 +257,49 @@ def refresh_window(
 
 
 def _require_integer(value: object, *, argument: str) -> int:
+    """
+    Validate and return an integer argument.
+    
+    Parameters:
+        value (object): The value to validate.
+        argument (str): The argument name used in the validation error.
+    
+    Returns:
+        int: The validated integer.
+    
+    Raises:
+        ValueError: If `value` is not an integer.
+    """
     if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError(f"{argument} must be an integer")
     return value
 
 
 def _require_load_id(load_id: str) -> None:
+    """
+    Validate that a load identifier is a non-empty string.
+    
+    Parameters:
+    	load_id (str): Load identifier to validate.
+    
+    Raises:
+    	ValueError: If `load_id` is not a string or is empty.
+    """
     if not isinstance(load_id, str) or not load_id:
         raise ValueError("load_id must be a non-empty string")
 
 
 def _validate_refresh_window(refresh_from: datetime, refresh_to: datetime) -> None:
+    """
+    Validate that a refresh interval uses timezone-aware datetimes and has a positive duration.
+    
+    Parameters:
+    	refresh_from (datetime): Start of the refresh interval.
+    	refresh_to (datetime): End of the refresh interval.
+    
+    Raises:
+    	ValueError: If either datetime lacks timezone information or the start is not earlier than the end.
+    """
     for argument, value in (("refresh_from", refresh_from), ("refresh_to", refresh_to)):
         if value.tzinfo is None or value.utcoffset() is None:
             raise ValueError(f"{argument} must include timezone information")
@@ -199,6 +308,19 @@ def _validate_refresh_window(refresh_from: datetime, refresh_to: datetime) -> No
 
 
 def _result_integer(value: Mapping[object, object], *, field: str) -> int:
+    """
+    Extract a required integer field from a Snowflake result mapping.
+    
+    Parameters:
+    	value (Mapping[object, object]): The result mapping to inspect.
+    	field (str): The field whose integer value should be returned.
+    
+    Returns:
+    	int: The field value.
+    
+    Raises:
+    	RuntimeError: If the field value is not an integer.
+    """
     result = value.get(field)
     if isinstance(result, bool) or not isinstance(result, int):
         raise RuntimeError(f"Snowflake returned an invalid {field}: {result!r}")
@@ -206,6 +328,18 @@ def _result_integer(value: Mapping[object, object], *, field: str) -> int:
 
 
 def _result_timestamp(value: object) -> datetime | None:
+    """
+    Parse an optional Snowflake timestamp result.
+    
+    Parameters:
+    	value (object): A timestamp, ISO-formatted timestamp string, or `None`.
+    
+    Returns:
+    	datetime | None: The parsed timestamp, or `None` when no timestamp is provided.
+    
+    Raises:
+    	RuntimeError: If the value is not a datetime, `None`, or a valid ISO-formatted timestamp string.
+    """
     if value is None or isinstance(value, datetime):
         return value
     if not isinstance(value, str):
