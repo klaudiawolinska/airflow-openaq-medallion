@@ -6,10 +6,13 @@ from datetime import UTC, datetime
 import pytest
 
 from include.openaq.refresh_bronze import (
+    LOAD_SUMMARY_MERGE_SQL,
     REFRESH_STAGED_MEASUREMENTS_SQL,
     STAGING_DELETE_SQL,
     STAGING_INSERT_SQL,
+    RefreshResult,
     StagedMeasurement,
+    record_load_summary,
     refresh_window,
     stage_measurements,
 )
@@ -145,3 +148,59 @@ def test_refresh_window_rejects_a_missing_stored_procedure_result() -> None:
         refresh_window(
             connection, load_id="load-1", refresh_from=REFRESH_FROM, refresh_to=REFRESH_TO
         )
+
+
+def test_record_load_summary_upserts_the_refresh_counts() -> None:
+    oldest_new = datetime(2026, 1, 1, tzinfo=UTC)
+    connection = FakeConnection(refresh_result=None)
+
+    record_load_summary(
+        connection,
+        load_id="load-1",
+        load_type="ingest",
+        refresh_from=REFRESH_FROM,
+        refresh_to=REFRESH_TO,
+        api_record_count=10,
+        refresh_result=RefreshResult(
+            new_record_count=2,
+            changed_record_count=3,
+            absent_record_count=4,
+            oldest_new_measurement_at=oldest_new,
+        ),
+    )
+
+    assert connection.cursor_instance.executions == [
+        (
+            LOAD_SUMMARY_MERGE_SQL,
+            {
+                "load_id": "load-1",
+                "load_type": "ingest",
+                "refresh_from": REFRESH_FROM,
+                "refresh_to": REFRESH_TO,
+                "api_record_count": 10,
+                "new_record_count": 2,
+                "changed_record_count": 3,
+                "absent_record_count": 4,
+                "oldest_new_measurement_at": oldest_new,
+                "bronze_changed": True,
+            },
+        )
+    ]
+    assert connection.committed
+
+
+def test_refresh_result_has_a_small_json_serialisable_xcom_value() -> None:
+    result = RefreshResult(
+        new_record_count=1,
+        changed_record_count=0,
+        absent_record_count=0,
+        oldest_new_measurement_at=REFRESH_FROM,
+    )
+
+    assert result.xcom_value() == {
+        "new_record_count": 1,
+        "changed_record_count": 0,
+        "absent_record_count": 0,
+        "oldest_new_measurement_at": "2026-01-01T00:00:00+00:00",
+        "bronze_changed": True,
+    }

@@ -89,7 +89,7 @@
 
 ### Orchestration
 
-- A persistent sensor-fetch failure — retry the ingest run.
+- A persistent sensor-fetch server error — log the affected sensor and continue the ingest run; the window summary exposes any resulting absent records.
 - Backfill of an already-loaded window (idempotency).
 - Overlapping runs / concurrency; retry storms.
 - Missing or expired secret; loss of the Snowflake connection during a load or transformation.

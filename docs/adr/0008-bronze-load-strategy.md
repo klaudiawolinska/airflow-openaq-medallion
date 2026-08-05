@@ -11,6 +11,8 @@ Each hourly ingest run re-fetches the preceding 24-hour interval. Consecutive ru
 
 An ingest run writes its raw API response to a transient staging table under its load ID. A stored procedure compares that staging set with bronze for the target window. When the sets differ, one Snowflake transaction replaces the bronze window with the staged rows.
 
+When a sensor measurements request still returns a server error after the client's retries, ingestion logs the sensor ID and continues. The missing sensor contributes no rows to staging, so any of its existing measurements in the refreshed window are counted as absent and removed by the window replacement.
+
 Bronze retains one current source representation for each ingest window, rather than a history of every retrieval.
 
 ## Consequences
