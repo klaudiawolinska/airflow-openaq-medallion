@@ -59,6 +59,7 @@ Key architectural decisions:
 | Isolated dbt environment                               | Cosmos runs dbt in `LOCAL` mode from a dedicated virtualenv, keeping dbt dependencies separate from Airflow | —                                                                                        |
 | Scheduled ingestion and asset-triggered transformation | The transform runs after ingestion writes data to bronze                             | [0006](docs/adr/0006-scheduling-model.md)                                                |
 | Bronze load by overwrite window                        | Re-fetching the 24-hour window refreshes bronze without retaining duplicate retrievals                      | [0008](docs/adr/0008-bronze-load-strategy.md)                                            |
+| Scheduled provider scope                               | Scheduled ingestion targets the providers that returned measurements in the source audit                     | [0009](docs/adr/0009-scheduled-provider-scope.md)                                        |
 
 
 ---
@@ -68,7 +69,7 @@ Key architectural decisions:
 ## Scope
 
 - **Geography:** all of Poland.
-- **Providers:** EEA and AirGradient.
+- **Scheduled providers:** EEA and AirGradient.
 - **Pollutants:** PM2.5, PM10, NO2, O3, SO2, CO, BC (black carbon).
 - **Cadence:** hourly.
 - **Ingest lookback:** a rolling 24-hour lookback per scheduled run; a one-time backfill of the full calendar year 2025 is planned to provide a complete year of history.
@@ -89,7 +90,7 @@ Key architectural decisions:
 
 ## Source audit
 
-`openaq_audit` is a manual DAG that checks every target-parameter sensor discovered in Poland for a requested UTC window and stores one result per sensor in Snowflake. The audit run from 2026-04-06 22:00 UTC to 2026-08-04 22:00 UTC returned data only from EEA and AirGradient, so scheduled ingestion uses those providers.
+`openaq_audit` is a manual DAG that checks every target-parameter sensor discovered in Poland for a requested UTC window and stores one result per sensor in Snowflake. It covers all Polish providers; scheduled ingestion uses the provider scope defined in [ADR-0009](docs/adr/0009-scheduled-provider-scope.md).
 
 ---
 
