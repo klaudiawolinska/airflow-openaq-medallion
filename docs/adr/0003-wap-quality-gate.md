@@ -5,7 +5,7 @@
 
 ## Context
 
-The gold layer is the consumer-facing dataset. OpenAQ data can contain gaps, duplicate observations, and measurements outside the accepted range, so publication to gold must be conditional on a data-quality audit.
+The gold layer is the consumer-facing dataset, so publication must be conditional on validation of the source contract and analytical values.
 
 ## Decision
 

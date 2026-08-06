@@ -29,7 +29,7 @@
 
 ## 2. Problems we solve
 
-- **Source-data quality issues** — OpenAQ contains gaps, duplicates (including across pagination pages), and out-of-range values; naive ingestion produces unreliable analytics.
+- **Source-data quality issues** — the pipeline must detect gaps, repeated source identities, and out-of-range values.
 - **Bad data reaching consumers** — without a quality gate, an invalid record becomes visible before anyone catches it. WAP prevents this: data reaches gold only after passing the audit.
 - **Costly / rate-limited re-ingest** — re-fetching from the API is slow and rate-limited; isolating a raw bronze layer allows reprocessing without hitting the API again.
 - **Duplication on re-runs** — overwriting the ingest window means re-running it does not duplicate bronze data.
@@ -96,7 +96,7 @@
 
 ### WAP / dbt
 
-- A data-contract test fails → no publication to gold + alert; invalid source records are excluded from gold without blocking publication (see ADR-0004).
+- A data-contract test fails → no publication to gold + alert; measurements with usable identities but invalid analytical values are excluded from gold without blocking publication of other valid records (see ADR-0004).
 - Ingest fails before emitting its Asset → transform does not run and the published data remains unchanged.
 - Empty silver / a window with no measurements (a legitimate absence vs an error).
 
