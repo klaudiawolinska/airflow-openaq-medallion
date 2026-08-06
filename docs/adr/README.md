@@ -12,3 +12,4 @@ Template: [0000-template.md](0000-template.md)
 | [0006](0006-scheduling-model.md) | Scheduled ingestion and asset-triggered transformation | Accepted |
 | [0008](0008-bronze-load-strategy.md) | Bronze load by overwrite window | Accepted |
 | [0009](0009-scheduled-provider-scope.md) | Scheduled ingestion provider scope | Accepted |
+| [0010](0010-bronze-location-snapshots.md) | Raw location snapshots in bronze | Accepted |

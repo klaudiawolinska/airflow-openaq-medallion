@@ -8,7 +8,7 @@ import pytest
 
 from include.openaq.client import FetchResult
 from include.openaq.errors import OpenAQServerError
-from include.openaq.ingest import collect_measurements, refresh_window_for_interval
+from include.openaq.ingest import collect_ingest_batch, refresh_window_for_interval
 from tests.openaq_fakes import location, measurement, sensor
 
 WINDOW_STARTED_AT = datetime(2026, 1, 1, tzinfo=UTC)
@@ -46,28 +46,27 @@ class FakeIngestClient:
         return result
 
 
-def test_collect_measurements_limits_discovery_and_fetches_target_sensors(
+def test_collect_ingest_batch_limits_discovery_and_fetches_target_sensors(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     caplog.set_level(logging.INFO, logger="include.openaq.ingest")
     included_sensor = sensor(sensor_id=11, parameter="pm25", parameter_id=2)
     ignored_parameter = sensor(sensor_id=12, parameter="pm1", parameter_id=19)
     ignored_provider_sensor = sensor(sensor_id=13, parameter="pm10", parameter_id=1)
+    included_location = location(
+        location_id=4,
+        provider_id=66,
+        provider_name="AirGradient",
+        sensors=[included_sensor, ignored_parameter],
+    )
+    unexpected_location = location(
+        location_id=5,
+        provider_id=999,
+        provider_name="Unexpected provider",
+        sensors=[ignored_provider_sensor],
+    )
     client = FakeIngestClient(
-        [
-            location(
-                location_id=4,
-                provider_id=66,
-                provider_name="AirGradient",
-                sensors=[included_sensor, ignored_parameter],
-            ),
-            location(
-                location_id=5,
-                provider_id=999,
-                provider_name="Unexpected provider",
-                sensors=[ignored_provider_sensor],
-            ),
-        ],
+        [included_location, unexpected_location],
         {
             11: FetchResult(
                 records=[measurement(utc="2026-01-01T01:00:00Z")],
@@ -76,7 +75,7 @@ def test_collect_measurements_limits_discovery_and_fetches_target_sensors(
         },
     )
 
-    batch = collect_measurements(
+    batch = collect_ingest_batch(
         client,
         window_started_at=WINDOW_STARTED_AT,
         window_ended_at=WINDOW_ENDED_AT,
@@ -84,14 +83,15 @@ def test_collect_measurements_limits_discovery_and_fetches_target_sensors(
 
     assert client.location_calls == [("PL", "66,70")]
     assert client.measurement_calls == [(11, WINDOW_STARTED_AT, WINDOW_ENDED_AT)]
-    assert (batch.location_count, batch.sensor_count, batch.api_record_count) == (1, 1, 1)
+    assert (batch.location_count, batch.sensor_count, batch.api_record_count) == (2, 1, 1)
+    assert batch.locations == [included_location, unexpected_location]
     assert len(batch.measurements) == 1
     assert batch.measurements[0].sensor_id == 11
     assert batch.server_error_sensor_count == 0
     assert "progress: 1/1 sensors processed; API records=1 accepted=1" in caplog.text
 
 
-def test_collect_measurements_enforces_the_half_open_window() -> None:
+def test_collect_ingest_batch_enforces_the_half_open_window() -> None:
     client = FakeIngestClient(
         [
             location(
@@ -113,7 +113,7 @@ def test_collect_measurements_enforces_the_half_open_window() -> None:
         },
     )
 
-    batch = collect_measurements(
+    batch = collect_ingest_batch(
         client,
         window_started_at=WINDOW_STARTED_AT,
         window_ended_at=WINDOW_ENDED_AT,
@@ -126,7 +126,7 @@ def test_collect_measurements_enforces_the_half_open_window() -> None:
     ] == ["2026-01-01T00:00:00Z", "2026-01-01T23:00:00Z"]
 
 
-def test_collect_measurements_rejects_duplicate_bronze_identities() -> None:
+def test_collect_ingest_batch_rejects_duplicate_bronze_identities() -> None:
     duplicate = measurement(utc="2026-01-01T01:00:00Z")
     client = FakeIngestClient(
         [
@@ -140,14 +140,14 @@ def test_collect_measurements_rejects_duplicate_bronze_identities() -> None:
     )
 
     with pytest.raises(ValueError, match="duplicate measurement identity"):
-        collect_measurements(
+        collect_ingest_batch(
             client,
             window_started_at=WINDOW_STARTED_AT,
             window_ended_at=WINDOW_ENDED_AT,
         )
 
 
-def test_collect_measurements_logs_a_server_error_and_continues_with_other_sensors(
+def test_collect_ingest_batch_logs_a_server_error_and_continues_with_other_sensors(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     caplog.set_level(logging.INFO, logger="include.openaq.ingest")
@@ -171,7 +171,7 @@ def test_collect_measurements_logs_a_server_error_and_continues_with_other_senso
         },
     )
 
-    batch = collect_measurements(
+    batch = collect_ingest_batch(
         client,
         window_started_at=WINDOW_STARTED_AT,
         window_ended_at=WINDOW_ENDED_AT,
@@ -247,3 +247,13 @@ def test_ingest_dag_has_the_required_three_task_chain() -> None:
     }
     assert dag.get_task("fetch_api_and_stage").retries == 0
     assert dag.get_task("refresh_bronze").retries == 0
+
+
+def test_ingest_dag_declares_the_bronze_dataset_asset_alias() -> None:
+    from dags.openaq_ingest import openaq_ingest
+
+    task = openaq_ingest().get_task("record_summary_and_emit_asset")
+
+    assert [outlet.name for outlet in task.outlets] == [
+        "openaq_bronze_dataset_updated"
+    ]

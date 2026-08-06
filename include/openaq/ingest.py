@@ -36,8 +36,9 @@ class IngestClient(Protocol):
 
 @dataclass(frozen=True)
 class IngestBatch:
-    """Measurements and small run metrics produced by one API collection."""
+    """Location records, measurements and metrics from one API collection."""
 
+    locations: list[dict[str, object]]
     measurements: list[StagedMeasurement]
     location_count: int
     sensor_count: int
@@ -59,13 +60,13 @@ def refresh_window_for_interval(
     return refresh_to - INGEST_LOOKBACK, refresh_to
 
 
-def collect_measurements(
+def collect_ingest_batch(
     client: IngestClient,
     *,
     window_started_at: datetime,
     window_ended_at: datetime,
 ) -> IngestBatch:
-    """Fetch target measurements from the production providers in Poland."""
+    """Collect one location snapshot and measurement window for bronze."""
     window_started_at = _normalise_utc(window_started_at, argument="window_started_at")
     window_ended_at = _normalise_utc(window_ended_at, argument="window_ended_at")
     if window_started_at >= window_ended_at:
@@ -86,8 +87,9 @@ def collect_measurements(
         for sensor in filter_sensors_by_parameter(sensors_from_location(location))
     ]
     log.info(
-        "OpenAQ ingest discovered %d production-provider locations and %d "
-        "target-parameter sensors for [%s, %s)",
+        "OpenAQ ingest received %d locations, matched %d production-provider "
+        "locations and discovered %d target-parameter sensors for [%s, %s)",
+        len(discovered_locations),
         len(locations),
         len(sensors),
         window_started_at.isoformat(),
@@ -143,8 +145,9 @@ def collect_measurements(
             window_ended_at.isoformat(),
         )
     return IngestBatch(
+        locations=discovered_locations,
         measurements=staged_measurements,
-        location_count=len(locations),
+        location_count=len(discovered_locations),
         sensor_count=len(sensors),
         api_record_count=api_record_count,
         excluded_record_count=excluded_record_count,

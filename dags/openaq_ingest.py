@@ -8,11 +8,12 @@ from airflow.providers.snowflake.hooks.snowflake import SnowflakeHook
 from airflow.sdk import Asset, AssetAlias, Variable, dag, get_current_context, task
 
 from include.openaq.client import OpenAQClient
-from include.openaq.ingest import collect_measurements, refresh_window_for_interval
+from include.openaq.ingest import collect_ingest_batch, refresh_window_for_interval
 from include.openaq.refresh_bronze import (
     RefreshResult,
     record_load_summary,
     refresh_window,
+    stage_locations,
     stage_measurements,
 )
 
@@ -21,8 +22,8 @@ log = logging.getLogger(__name__)
 OPENAQ_API_KEY_VARIABLE = "openaq_api_key"
 SNOWFLAKE_CONN_ID = "snowflake_default"
 
-BRONZE_MEASUREMENTS_ASSET = Asset("openaq://snowflake/bronze/measurements")
-BRONZE_MEASUREMENTS_CHANGE_ALIAS = AssetAlias("openaq_bronze_measurements_changed")
+BRONZE_DATASET_ASSET = Asset("openaq://snowflake/bronze/dataset")
+BRONZE_DATASET_UPDATE_ALIAS = AssetAlias("openaq_bronze_dataset_updated")
 
 DEFAULT_ARGS = {
     "retries": 1,
@@ -53,7 +54,7 @@ def openaq_ingest():
     def fetch_api_and_stage() -> dict[str, object]:
         context = get_current_context()
         load_id, refresh_from, refresh_to = _run_identity_and_window(context)
-        batch = collect_measurements(
+        batch = collect_ingest_batch(
             OpenAQClient(Variable.get(OPENAQ_API_KEY_VARIABLE)),
             window_started_at=refresh_from,
             window_ended_at=refresh_to,
@@ -62,6 +63,11 @@ def openaq_ingest():
         hook = SnowflakeHook(snowflake_conn_id=SNOWFLAKE_CONN_ID)
         connection = hook.get_conn()
         try:
+            stage_locations(
+                connection,
+                load_id=load_id,
+                locations=batch.locations,
+            )
             stage_measurements(
                 connection,
                 load_id=load_id,
@@ -105,7 +111,7 @@ def openaq_ingest():
         log.info("Snowflake bronze refresh completed: %s", result.xcom_value())
         return refresh_summary
 
-    @task(outlets=[BRONZE_MEASUREMENTS_CHANGE_ALIAS])
+    @task(outlets=[BRONZE_DATASET_UPDATE_ALIAS])
     def record_summary_and_emit_asset(
         refresh_summary: dict[str, object],
         *,
@@ -139,25 +145,19 @@ def openaq_ingest():
             "load_id": load_id,
             "refresh_from": refresh_from.isoformat(),
             "refresh_to": refresh_to.isoformat(),
+            "location_count": refresh_summary["location_count"],
             "api_record_count": api_record_count,
             "server_error_sensor_count": refresh_summary["server_error_sensor_count"],
             **result.xcom_value(),
         }
-        if result.bronze_changed:
-            outlet_events[BRONZE_MEASUREMENTS_CHANGE_ALIAS].add(
-                BRONZE_MEASUREMENTS_ASSET,
-                extra=run_summary,
-            )
-            log.info(
-                "OpenAQ ingest recorded its summary and emitted the bronze Asset: %s",
-                run_summary,
-            )
-        else:
-            log.info(
-                "OpenAQ ingest recorded its summary; bronze was unchanged, so no Asset "
-                "was emitted: %s",
-                run_summary,
-            )
+        outlet_events[BRONZE_DATASET_UPDATE_ALIAS].add(
+            BRONZE_DATASET_ASSET,
+            extra=run_summary,
+        )
+        log.info(
+            "OpenAQ ingest recorded its summary and emitted the bronze dataset Asset: %s",
+            run_summary,
+        )
 
     staging_summary = fetch_api_and_stage()
     refresh_summary = refresh_bronze(staging_summary)

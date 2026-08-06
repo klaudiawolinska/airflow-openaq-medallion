@@ -71,8 +71,8 @@ class FetchResult:
     Contains the fetched records together with pagination metadata and
     information about duplicate records detected during the fetch.
 
-    Duplicate records are counted but remain in `records`. This preserves the
-    raw API response; deduplication is performed later during the silver merge.
+    Duplicate records are counted but remain in `records`, allowing each caller
+    to apply the handling required by its load strategy.
     """
 
     records: list[dict[str, Any]]

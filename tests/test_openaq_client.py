@@ -192,7 +192,7 @@ def test_cross_page_duplicates_are_counted_but_never_dropped() -> None:
 
     result = client.list_measurements(1, datetime_from=WINDOW_FROM, datetime_to=WINDOW_TO)
 
-    assert len(result.records) == 3, "duplicates must survive into bronze"
+    assert len(result.records) == 3, "duplicates must remain available to the caller"
     assert result.duplicate_count == 1
     assert result.duplicate_sample == (("2026-07-01T01:00:00Z", 2),)
 
