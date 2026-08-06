@@ -57,6 +57,25 @@ FROM VALUES (
 )
 """
 
+LOCATION_STAGING_DELETE_SQL = """
+DELETE FROM OPENAQ.BRONZE.LOCATION_STAGING
+WHERE LOAD_ID = %(load_id)s
+"""
+
+LOCATION_STAGING_INSERT_SQL = """
+INSERT INTO OPENAQ.BRONZE.LOCATION_STAGING (
+    LOAD_ID,
+    RAW_LOCATION
+)
+SELECT
+    column1,
+    PARSE_JSON(column2)
+FROM VALUES (
+    %(load_id)s,
+    %(raw_location)s
+)
+"""
+
 REFRESH_STAGED_MEASUREMENTS_SQL = """
 CALL OPENAQ.BRONZE.REFRESH_STAGED_MEASUREMENTS(
     %(load_id)s,
@@ -226,6 +245,29 @@ def stage_measurements(
             cursor.executemany(
                 STAGING_INSERT_SQL,
                 [measurement.staging_row(load_id) for measurement in measurements],
+            )
+    connection.commit()
+
+
+def stage_locations(
+    connection: Connection, *, load_id: str, locations: list[dict[str, object]]
+) -> None:
+    """Replace the raw location records staged for one load ID."""
+    _require_load_id(load_id)
+    with connection.cursor() as cursor:
+        cursor.execute(LOCATION_STAGING_DELETE_SQL, {"load_id": load_id})
+        if locations:
+            cursor.executemany(
+                LOCATION_STAGING_INSERT_SQL,
+                [
+                    {
+                        "load_id": load_id,
+                        "raw_location": json.dumps(
+                            location, separators=(",", ":"), sort_keys=True
+                        ),
+                    }
+                    for location in locations
+                ],
             )
     connection.commit()
 

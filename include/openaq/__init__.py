@@ -24,7 +24,7 @@ from .errors import (
 from .ingest import (
     INGEST_LOOKBACK,
     IngestBatch,
-    collect_measurements,
+    collect_ingest_batch,
     refresh_window_for_interval,
 )
 from .ratelimit import OPENAQ_FREE_TIER, SlidingWindowLimiter, Window
@@ -33,6 +33,7 @@ from .refresh_bronze import (
     StagedMeasurement,
     record_load_summary,
     refresh_window,
+    stage_locations,
     stage_measurements,
 )
 
@@ -60,10 +61,11 @@ __all__ = [
     "StagedMeasurement",
     "Window",
     "filter_sensors_by_parameter",
-    "collect_measurements",
+    "collect_ingest_batch",
     "record_load_summary",
     "refresh_window",
     "refresh_window_for_interval",
     "sensors_from_location",
+    "stage_locations",
     "stage_measurements",
 ]

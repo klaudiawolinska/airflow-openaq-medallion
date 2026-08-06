@@ -38,7 +38,12 @@ def test_provision_scripts_present() -> None:
 def test_bronze_tables_are_provisioned() -> None:
     sql = (BOOTSTRAP_DIR / "04_bronze_tables.sql").read_text()
 
-    for table in ("MEASUREMENTS", "SENSOR_AUDIT_RESULTS", "LOAD_SUMMARY"):
+    for table in (
+        "MEASUREMENTS",
+        "LOCATION_SNAPSHOTS",
+        "SENSOR_AUDIT_RESULTS",
+        "LOAD_SUMMARY",
+    ):
         assert re.search(
             rf"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+OPENAQ\.BRONZE\.{table}\b",
             sql,
@@ -51,6 +56,7 @@ def test_bronze_time_and_change_columns_are_documented() -> None:
 
     for table, column in (
         ("MEASUREMENTS", "MEASUREMENT_PERIOD_FROM_UTC"),
+        ("LOCATION_SNAPSHOTS", "SNAPSHOT_AT"),
         ("SENSOR_AUDIT_RESULTS", "AUDIT_FROM_UTC"),
         ("SENSOR_AUDIT_RESULTS", "AUDIT_TO_UTC"),
         ("SENSOR_AUDIT_RESULTS", "OLDEST_MEASUREMENT_AT"),
@@ -67,12 +73,35 @@ def test_bronze_time_and_change_columns_are_documented() -> None:
         ), f"04_bronze_tables.sql must document OPENAQ.BRONZE.{table}.{column}"
 
 
-def test_bronze_staging_is_transient() -> None:
+@pytest.mark.parametrize("table", ("MEASUREMENT_STAGING", "LOCATION_STAGING"))
+def test_bronze_staging_is_transient(table: str) -> None:
     sql = (BOOTSTRAP_DIR / "04_bronze_tables.sql").read_text()
 
     assert re.search(
         r"CREATE\s+TRANSIENT\s+TABLE\s+IF\s+NOT\s+EXISTS\s+"
-        r"OPENAQ\.BRONZE\.MEASUREMENT_STAGING\b",
+        rf"OPENAQ\.BRONZE\.{table}\b",
+        sql,
+        re.IGNORECASE,
+    )
+
+
+def test_bronze_refresh_publishes_and_cleans_the_staged_location_snapshot() -> None:
+    sql = (BOOTSTRAP_DIR / "04_bronze_tables.sql").read_text()
+
+    assert re.search(
+        r"DELETE\s+FROM\s+OPENAQ\.BRONZE\.LOCATION_SNAPSHOTS\s+"
+        r"WHERE\s+LOAD_ID\s*=\s*:LOAD_ID",
+        sql,
+        re.IGNORECASE,
+    )
+    assert re.search(
+        r"INSERT\s+INTO\s+OPENAQ\.BRONZE\.LOCATION_SNAPSHOTS",
+        sql,
+        re.IGNORECASE,
+    )
+    assert re.search(
+        r"DELETE\s+FROM\s+OPENAQ\.BRONZE\.LOCATION_STAGING\s+"
+        r"WHERE\s+LOAD_ID\s*=\s*:LOAD_ID",
         sql,
         re.IGNORECASE,
     )

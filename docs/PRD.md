@@ -97,7 +97,7 @@
 ### WAP / dbt
 
 - A data-contract test fails → no publication to gold + alert; invalid source records are excluded from gold without blocking publication (see ADR-0004).
-- Ingest emitted no Asset (0 records) → transform does not run → data looks "stale".
+- Ingest fails before emitting its Asset → transform does not run and the published data remains unchanged.
 - Empty silver / a window with no measurements (a legitimate absence vs an error).
 
 ## 6. Open items

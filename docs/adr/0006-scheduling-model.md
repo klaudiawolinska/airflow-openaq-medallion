@@ -9,9 +9,9 @@ Ingestion needs its own schedule because it has no upstream event to trigger it.
 
 ## Decision
 
-The ingest DAG runs hourly. A run emits an Airflow Asset when it changes the bronze contents for its target window. A change is an added, modified, or removed measurement. The transform DAG is scheduled on that Asset.
+The ingest DAG runs hourly. Each successful run emits one Airflow Asset representing the location snapshot and measurement window published together in bronze. The transform DAG is scheduled on that Asset.
 
 ## Consequences
 
-- The transform DAG runs after an ingest run changes bronze, rather than on an independent schedule.
-- Reprocessing an identical window does not emit the Asset, so it does not trigger a transform run.
+- The transform DAG runs after an ingest run publishes bronze data, rather than on an independent schedule.
+- Reprocessing an identical measurement window still emits the Asset because it records a separate location discovery snapshot.

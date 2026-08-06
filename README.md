@@ -9,7 +9,7 @@ An air-quality data pipeline for OpenAQ data from Poland, built with Apache Airf
 - ✅ **M0 — Local Airflow environment and baseline CI.** Astro starts the local runtime and CI runs lint and DAG-integrity checks.
 - ✅ **M1 — Snowflake foundation.** Bootstrap SQL provisions the warehouse, medallion schemas, roles, service users, and a smoke-test connection.
 - ✅ **M2 — OpenAQ client.** The standalone client discovers sensors and retrieves paginated measurements within the API request limit.
-- ✅ **M3 — Bronze ingest.** An hourly DAG loads the rolling 24-hour window into bronze and emits an Airflow Asset.
+- ✅ **M3 — Bronze ingest.** An hourly DAG loads the rolling 24-hour measurement window and a raw location snapshot into bronze, then emits one Airflow Asset for the published dataset.
 - ⬜ **M4 — dbt transformation.** An Asset-triggered Cosmos DAG will run dbt models and tests, with `dbt build` added to CI.
 - ⬜ **M5 — Silver layer.** Transformations will clean, type, and deduplicate measurements while retaining invalid records for inspection.
 - ⬜ **M6 — Data contracts.** The pipeline will detect breaking upstream schema changes before they reach gold.
@@ -25,8 +25,8 @@ flowchart TD
     API["OpenAQ API v3<br/>hourly measurements · Poland"]
 
     subgraph ingest["DAG: openaq_ingest — hourly schedule"]
-        INGEST["single task<br/>discover sensors + fetch measurements"]
-        BRONZE[("BRONZE<br/>raw VARIANT<br/>overwrite-per-window")]
+        INGEST["single task<br/>discover locations and sensors<br/>+ fetch measurements"]
+        BRONZE[("BRONZE<br/>raw location snapshots<br/>+ measurement overwrite window")]
         INGEST --> BRONZE
     end
 
@@ -60,6 +60,7 @@ Key architectural decisions:
 | Scheduled ingestion and asset-triggered transformation | The transform runs after ingestion writes data to bronze                             | [0006](docs/adr/0006-scheduling-model.md)                                                |
 | Bronze load by overwrite window                        | Re-fetching the 24-hour window refreshes bronze without retaining duplicate retrievals                      | [0008](docs/adr/0008-bronze-load-strategy.md)                                            |
 | Scheduled provider scope                               | Scheduled ingestion targets the providers that returned measurements in the source audit                     | [0009](docs/adr/0009-scheduled-provider-scope.md)                                        |
+| Raw location snapshots                                 | Each discovery response preserves station metadata and embedded sensors for downstream transformation        | [0010](docs/adr/0010-bronze-location-snapshots.md)                                       |
 
 
 ---
@@ -98,9 +99,9 @@ Key architectural decisions:
 
 ## Target pipeline behaviour
 
-- **Idempotency** — bronze uses overwrite-per-window, so reprocessing does not duplicate data; silver/gold dbt models will use incremental materializations.
-- **Ingest** — one task fetches sensors sequentially within the OpenAQ request limit.
-- **Asset emission** — ingest emits an Asset when the bronze contents for the refreshed window change through added, modified, or removed measurements.
+- **Idempotency** — measurement reprocessing uses overwrite-per-window, while retrying a location snapshot replaces only rows from the same load ID; silver/gold dbt models will use incremental materializations.
+- **Ingest** — one task preserves the raw location discovery response and fetches target-sensor measurements sequentially within the OpenAQ request limit.
+- **Asset emission** — each successful ingest emits one Asset for the location snapshot and measurement window published together in bronze.
 - **Backfill** — date-parameterized loads will support the 2025 backfill in rate-limit-aware chunks.
 - **Data quality** — the WAP gate will publish to gold only after dbt tests pass; invalid source records will remain available for inspection in silver, while data-contract failures will block publication and trigger an alert.
 - **Secrets** — connections and the OpenAQ key live outside code (`.env` or a Secrets Backend); the repository ships only `.env.example`.
@@ -162,7 +163,7 @@ cp .env.example .env      # `account` as <org>-<account>, + OpenAQ;
 astro dev start
 ```
 
-Trigger the `_snowflake_smoke` DAG to confirm the connection (it logs the Snowflake version and `current_role=OPENAQ_PIPELINE`). The hourly `openaq_ingest` DAG loads data into BRONZE and emits an Asset when the refreshed window changes. M4 adds the Asset-triggered `openaq_transform` DAG, which will run dbt via Cosmos before the WAP gate publishes data to GOLD.
+Trigger the `_snowflake_smoke` DAG to confirm the connection (it logs the Snowflake version and `current_role=OPENAQ_PIPELINE`). The hourly `openaq_ingest` DAG loads location snapshots and measurements into BRONZE and emits one Asset for the published dataset. M4 adds the Asset-triggered `openaq_transform` DAG, which will run dbt via Cosmos before the WAP gate publishes data to GOLD.
 
 ---
 

@@ -7,6 +7,8 @@ import pytest
 
 from include.openaq.refresh_bronze import (
     LOAD_SUMMARY_MERGE_SQL,
+    LOCATION_STAGING_DELETE_SQL,
+    LOCATION_STAGING_INSERT_SQL,
     REFRESH_STAGED_MEASUREMENTS_SQL,
     STAGING_DELETE_SQL,
     STAGING_INSERT_SQL,
@@ -14,9 +16,10 @@ from include.openaq.refresh_bronze import (
     StagedMeasurement,
     record_load_summary,
     refresh_window,
+    stage_locations,
     stage_measurements,
 )
-from tests.openaq_fakes import measurement
+from tests.openaq_fakes import location, measurement, sensor
 
 REFRESH_FROM = datetime(2026, 1, 1, tzinfo=UTC)
 REFRESH_TO = datetime(2026, 1, 2, tzinfo=UTC)
@@ -89,6 +92,26 @@ def test_stage_measurements_replaces_only_the_current_loads_staging_rows() -> No
     assert connection.cursor_instance.bulk_sql == STAGING_INSERT_SQL
     assert connection.cursor_instance.bulk_rows is not None
     assert connection.cursor_instance.bulk_rows[0]["load_id"] == "load-1"
+    assert connection.committed
+
+
+def test_stage_locations_replaces_the_loads_staging_rows_with_raw_records() -> None:
+    connection = FakeConnection(refresh_result=None)
+    raw_location = location(
+        location_id=4,
+        sensors=[sensor(sensor_id=11, parameter="pm25")],
+    )
+
+    stage_locations(connection, load_id="load-1", locations=[raw_location])
+
+    assert connection.cursor_instance.executions == [
+        (LOCATION_STAGING_DELETE_SQL, {"load_id": "load-1"})
+    ]
+    assert connection.cursor_instance.bulk_sql == LOCATION_STAGING_INSERT_SQL
+    assert connection.cursor_instance.bulk_rows is not None
+    staged = connection.cursor_instance.bulk_rows[0]
+    assert staged["load_id"] == "load-1"
+    assert json.loads(staged["raw_location"]) == raw_location
     assert connection.committed
 
 
