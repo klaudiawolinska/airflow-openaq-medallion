@@ -10,8 +10,8 @@ An air-quality data pipeline for OpenAQ data from Poland, built with Apache Airf
 - ✅ **M1 — Snowflake foundation.** Bootstrap SQL provisions the warehouse, medallion schemas, roles, service users, and a smoke-test connection.
 - ✅ **M2 — OpenAQ client.** The standalone client discovers sensors and retrieves paginated measurements within the API request limit.
 - ✅ **M3 — Bronze ingest.** An hourly DAG loads the rolling 24-hour measurement window and a raw location snapshot into bronze, then emits one Airflow Asset for the published dataset.
-- ⬜ **M4 — dbt transformation.** An Asset-triggered Cosmos DAG will run dbt models and tests, with `dbt build` added to CI.
-- ⬜ **M5 — Silver layer.** Transformations will clean, type, and deduplicate measurements while retaining invalid records for inspection.
+- ⬜ **M4 — dbt foundation and orchestration.** A dbt project will declare the bronze sources and build pass-through staging views through an Asset-triggered Cosmos DAG, with the same build running against isolated CI fixtures.
+- ⬜ **M5 — Silver transformations.** Incremental models will type and normalize measurements and location snapshots, record row-level validity, and enforce tested identity constraints.
 - ⬜ **M6 — Data contracts.** The pipeline will detect breaking upstream schema changes before they reach gold.
 - ⬜ **M7 — Quality gate and gold.** dbt tests will gate publication of the first gold mart.
 - ⬜ **M8 — Backfill and serving.** The historical backfill and a Snowsight dashboard will complete the end-to-end pipeline.
@@ -31,7 +31,7 @@ flowchart TD
     end
 
     subgraph transform["DAG: openaq_transform — Asset-triggered · Cosmos → dbt"]
-        SILVER[("SILVER<br/>clean · dedup · type<br/>flag invalid rows")]
+        SILVER[("SILVER<br/>normalize · type · validate<br/>flag invalid rows")]
         GATE{"WAP gate<br/>dbt tests"}
         GOLD[("GOLD<br/>aggregates · station dimension")]
         SILVER --> GATE
@@ -54,13 +54,12 @@ Key architectural decisions:
 
 | Decision                                               | Why                                                                                                         | ADR                                                                                      |
 | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| WAP gate via dbt tests                                 | Data reaches gold only after a quality audit; OpenAQ has gaps, duplicates, and out-of-range values          | [0003](docs/adr/0003-wap-quality-gate.md), [0004](docs/adr/0004-wap-failure-handling.md) |
+| WAP gate via dbt tests                                 | Data reaches gold only after its structural contract and analytical values have been validated               | [0003](docs/adr/0003-wap-quality-gate.md), [0004](docs/adr/0004-wap-failure-handling.md) |
 | dbt models and tests as Airflow tasks                  | Airflow exposes the status and dependencies of individual dbt nodes                                         | [0005](docs/adr/0005-dbt-via-cosmos.md)                                                  |
 | Isolated dbt environment                               | Cosmos runs dbt in `LOCAL` mode from a dedicated virtualenv, keeping dbt dependencies separate from Airflow | —                                                                                        |
 | Scheduled ingestion and asset-triggered transformation | The transform runs after ingestion writes data to bronze                             | [0006](docs/adr/0006-scheduling-model.md)                                                |
-| Bronze load by overwrite window                        | Re-fetching the 24-hour window refreshes bronze without retaining duplicate retrievals                      | [0008](docs/adr/0008-bronze-load-strategy.md)                                            |
+| Dataset-specific bronze loads                          | Measurements reconcile an overlapping window; locations preserve each raw discovery snapshot                | [0008](docs/adr/0008-bronze-load-strategy.md)                                            |
 | Scheduled provider scope                               | Scheduled ingestion targets the providers that returned measurements in the source audit                     | [0009](docs/adr/0009-scheduled-provider-scope.md)                                        |
-| Raw location snapshots                                 | Each discovery response preserves station metadata and embedded sensors for downstream transformation        | [0010](docs/adr/0010-bronze-location-snapshots.md)                                       |
 
 
 ---
@@ -119,7 +118,7 @@ airflow-openaq-medallion/
 │   ├── openaq_transform.py       # silver → gold via Cosmos (dbt)
 ├── dbt/openaq/
 │   ├── models/
-│   │   ├── silver/               # clean, dedup, type, flag invalid rows
+│   │   ├── silver/               # normalize, type, validate, flag invalid rows
 │   │   └── gold/                 # aggregates + station dimension
 │   ├── tests/                    # dbt tests = quality gate
 │   └── dbt_project.yml
