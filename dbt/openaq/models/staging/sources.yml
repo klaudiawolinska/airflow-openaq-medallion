@@ -9,3 +9,5 @@ sources:
         description: Raw OpenAQ measurements published by bronze ingestion.
       - name: location_snapshots
         description: Raw OpenAQ location discovery snapshots published by bronze ingestion.
+      - name: load_summary
+        description: Completed Bronze refresh windows used to synchronize incremental measurement models.

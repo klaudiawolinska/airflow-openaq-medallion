@@ -1,0 +1,2 @@
+load_id,refresh_from_utc,refresh_to_utc,completed_at
+ci-fixture-1,2026-08-05T11:00:00+00:00,2026-08-06T11:00:00+00:00,2026-08-06T11:05:00+00:00

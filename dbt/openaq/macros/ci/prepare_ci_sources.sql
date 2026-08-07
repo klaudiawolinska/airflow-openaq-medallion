@@ -21,6 +21,17 @@
         from {{ ref('location_snapshots') }}
     {% endset %}
 
+    {% set load_summary_sql %}
+        create or replace table {{ target.database }}.{{ target.schema }}.load_summary as
+        select
+            load_id,
+            refresh_from_utc,
+            refresh_to_utc,
+            completed_at
+        from {{ ref('load_summary') }}
+    {% endset %}
+
     {% do run_query(measurements_sql) %}
     {% do run_query(locations_sql) %}
+    {% do run_query(load_summary_sql) %}
 {% endmacro %}
