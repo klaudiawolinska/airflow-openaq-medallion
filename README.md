@@ -10,8 +10,8 @@ An air-quality data pipeline for OpenAQ data from Poland, built with Apache Airf
 - ✅ **M1 — Snowflake foundation.** Bootstrap SQL provisions the warehouse, medallion schemas, roles, service users, and a smoke-test connection.
 - ✅ **M2 — OpenAQ client.** The standalone client discovers sensors and retrieves paginated measurements within the API request limit.
 - ✅ **M3 — Bronze ingest.** An hourly DAG loads the rolling 24-hour measurement window and a raw location snapshot into bronze, then emits one Airflow Asset for the published dataset.
-- ⬜ **M4 — dbt foundation and orchestration.** A dbt project will declare the bronze sources and build pass-through staging views through an Asset-triggered Cosmos DAG, with the same build running against isolated CI fixtures.
-- ⬜ **M5 — Silver transformations.** Incremental models will type and normalize measurements and location snapshots, record row-level validity, and enforce tested identity constraints.
+- ✅ **M4 — dbt foundation and orchestration.** A dbt project types OpenAQ measurement, location, and location-sensor payloads into staging views through an Asset-triggered Cosmos DAG, with the same build running against isolated CI fixtures.
+- ⬜ **M5 — Silver transformations.** Incremental models will normalize staged records, record row-level validity, and enforce tested identity constraints.
 - ⬜ **M6 — Data contracts.** The pipeline will detect breaking upstream schema changes before they reach gold.
 - ⬜ **M7 — Quality gate and gold.** dbt tests will gate publication of the first gold mart.
 - ⬜ **M8 — Backfill and serving.** The historical backfill and a Snowsight dashboard will complete the end-to-end pipeline.
@@ -83,8 +83,8 @@ Key architectural decisions:
 - **Orchestration:** Apache Airflow 3 via the Astro CLI.
 - **Warehouse:** Snowflake, provisioned with bronze, silver, and gold schemas.
 - **Source client:** OpenAQ API v3.
-- **Transformations:** dbt-core and dbt-snowflake via `astronomer-cosmos` (M4).
-- **CI:** GitHub Actions runs lint and DAG-integrity tests; `dbt build` is added in M4.
+- **Transformations:** dbt-core and dbt-snowflake via `astronomer-cosmos`.
+- **CI:** GitHub Actions runs lint, DAG-integrity tests, and `dbt build` against isolated Snowflake fixtures.
 
 ---
 
@@ -118,7 +118,7 @@ airflow-openaq-medallion/
 │   ├── openaq_transform.py       # silver → gold via Cosmos (dbt)
 ├── dbt/openaq/
 │   ├── models/
-│   │   ├── silver/               # normalize, type, validate, flag invalid rows
+│   │   ├── staging/              # type OpenAQ payloads and expose nested sensors
 │   │   └── gold/                 # aggregates + station dimension
 │   ├── tests/                    # dbt tests = quality gate
 │   └── dbt_project.yml
@@ -162,7 +162,7 @@ cp .env.example .env      # `account` as <org>-<account>, + OpenAQ;
 astro dev start
 ```
 
-Trigger the `_snowflake_smoke` DAG to confirm the connection (it logs the Snowflake version and `current_role=OPENAQ_PIPELINE`). The hourly `openaq_ingest` DAG loads location snapshots and measurements into BRONZE and emits one Asset for the published dataset. M4 adds the Asset-triggered `openaq_transform` DAG, which will run dbt via Cosmos before the WAP gate publishes data to GOLD.
+Trigger the `_snowflake_smoke` DAG to confirm the connection (it logs the Snowflake version and `current_role=OPENAQ_PIPELINE`). The hourly `openaq_ingest` DAG loads location snapshots and measurements into BRONZE and emits one Asset for the published dataset. The Asset-triggered `openaq_transform` DAG then runs the typed dbt staging views through Cosmos. The WAP gate and gold publication follow in later milestones.
 
 ---
 

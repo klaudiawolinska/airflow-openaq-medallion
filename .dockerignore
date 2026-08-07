@@ -32,6 +32,3 @@ private/
 
 # OS
 .DS_Store
-
-# dbt
-dbt-requirements.txt
