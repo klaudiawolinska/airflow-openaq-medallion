@@ -3,17 +3,19 @@ version: 2
 seeds:
   - name: measurements
     config:
+      alias: measurements_fixture
       column_types:
         sensor_id: number(38, 0)
         parameter_id: number(38, 0)
         measurement_period_from_utc: timestamp_tz
-        raw_measurement: variant
+        raw_measurement: varchar
         load_id: varchar
         loaded_at: timestamp_tz
   - name: location_snapshots
     config:
+      alias: location_snapshots_fixture
       column_types:
         load_id: varchar
         snapshot_at: timestamp_tz
-        raw_location: variant
+        raw_location: varchar
         loaded_at: timestamp_tz
