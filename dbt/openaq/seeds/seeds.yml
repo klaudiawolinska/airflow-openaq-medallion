@@ -19,3 +19,11 @@ seeds:
         snapshot_at: timestamp_tz
         raw_location: varchar
         loaded_at: timestamp_tz
+  - name: load_summary
+    config:
+      alias: load_summary_fixture
+      column_types:
+        load_id: varchar
+        refresh_from_utc: timestamp_tz
+        refresh_to_utc: timestamp_tz
+        completed_at: timestamp_tz

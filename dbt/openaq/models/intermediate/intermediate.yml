@@ -1,0 +1,60 @@
+version: 2
+
+models:
+  - name: int_measurements_validated
+    description: Typed measurements classified by analytical validity without discarding source records.
+    columns:
+      - name: is_valid
+        data_tests:
+          - not_null
+      - name: invalid_reason
+        description: Pipe-delimited reasons a record is excluded from the conformed measurement model.
+  - name: int_measurements_conformed
+    description: Valid measurements synchronized with the Bronze refresh window for downstream transformations.
+    columns:
+      - name: sensor_id
+        data_tests:
+          - not_null
+      - name: parameter_id
+        data_tests:
+          - not_null
+      - name: measurement_period_from_utc
+        data_tests:
+          - not_null
+      - name: measurement_value
+        data_tests:
+          - not_null
+      - name: parameter_name
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['bc', 'co', 'no2', 'o3', 'pm10', 'pm25', 'so2']
+      - name: parameter_unit
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['µg/m³']
+  - name: int_measurements_rejected
+    description: Measurements excluded from the conformed model, retained with the source payload and rejection reason.
+    columns:
+      - name: invalid_reason
+        data_tests:
+          - not_null
+  - name: int_locations_current
+    description: Locations from the latest complete Bronze snapshot with normalized coordinate precision.
+    columns:
+      - name: location_id
+        data_tests:
+          - not_null
+  - name: int_location_sensors_current
+    description: Sensors associated with locations in the latest complete Bronze snapshot.
+    columns:
+      - name: location_id
+        data_tests:
+          - not_null
+      - name: sensor_id
+        data_tests:
+          - not_null
+      - name: parameter_id
+        data_tests:
+          - not_null

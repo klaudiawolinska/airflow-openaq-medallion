@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from airflow.sdk import Asset
 from cosmos import DbtDag
 from cosmos.config import ExecutionConfig, ProfileConfig, ProjectConfig, RenderConfig
-from cosmos.constants import ExecutionMode, InvocationMode, LoadMode
+from cosmos.constants import ExecutionMode, InvocationMode, LoadMode, TestBehavior
 from cosmos.profiles import SnowflakePrivateKeyFilePemProfileMapping
 
 SNOWFLAKE_CONN_ID = "snowflake_default"
@@ -50,5 +50,6 @@ openaq_transform = DbtDag(
         invocation_mode=InvocationMode.SUBPROCESS,
         dbt_executable_path=DBT_EXECUTABLE_PATH,
         select=["path:models"],
+        test_behavior=TestBehavior.AFTER_ALL,
     ),
 )

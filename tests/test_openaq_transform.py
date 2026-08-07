@@ -1,23 +1,40 @@
 """Contract checks for the dbt-driven transformation DAG."""
 
 
-def test_transform_dag_renders_the_typed_staging_models() -> None:
+def test_transform_dag_renders_the_staging_and_intermediate_models() -> None:
     from dags.openaq_transform import openaq_transform
 
     assert openaq_transform.dag_id == "openaq_transform"
     assert openaq_transform.max_active_runs == 1
     assert set(openaq_transform.tags) == {"openaq", "silver", "transform", "dbt"}
 
-    rendered_model_tasks = {
-        task.task_id.removesuffix(".run")
-        for task in openaq_transform.tasks
-        if task.task_id.startswith("stg_") and task.task_id.endswith(".run")
-    }
-    assert rendered_model_tasks == {
+    expected_models = {
+        "int_location_sensors_current",
+        "int_locations_current",
+        "int_measurements_conformed",
+        "int_measurements_rejected",
+        "int_measurements_validated",
         "stg_location_sensors",
         "stg_locations",
         "stg_measurements",
     }
+    rendered_task_ids = {task.task_id for task in openaq_transform.tasks}
+    assert {
+        model_name
+        for model_name in expected_models
+        if any(task_id.startswith(model_name) for task_id in rendered_task_ids)
+    } == expected_models
+
+    test_tasks = [task for task in openaq_transform.tasks if task.task_id == "openaq_test"]
+    assert len(test_tasks) == 1
+    upstream_task_ids = {
+        task.task_id for task in test_tasks[0].get_flat_relatives(upstream=True)
+    }
+    assert {
+        model_name
+        for model_name in expected_models
+        if any(task_id.startswith(model_name) for task_id in upstream_task_ids)
+    } == expected_models
 
 
 def test_staging_models_keep_raw_payloads() -> None:
@@ -53,3 +70,7 @@ def test_ci_fixture_macro_materializes_variant_sources() -> None:
     assert "from {{ ref('location_snapshots') }}" in macro
     assert "parse_json(raw_location) as raw_location" in macro
     assert "{% do run_query(locations_sql) %}" in macro
+
+    assert "create or replace table {{ target.database }}.{{ target.schema }}.load_summary" in macro
+    assert "from {{ ref('load_summary') }}" in macro
+    assert "{% do run_query(load_summary_sql) %}" in macro

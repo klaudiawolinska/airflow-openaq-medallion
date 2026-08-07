@@ -10,3 +10,5 @@ models:
   openaq:
     staging:
       +materialized: view
+    intermediate:
+      +materialized: view

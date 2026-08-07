@@ -11,7 +11,7 @@ An air-quality data pipeline for OpenAQ data from Poland, built with Apache Airf
 - ✅ **M2 — OpenAQ client.** The standalone client discovers sensors and retrieves paginated measurements within the API request limit.
 - ✅ **M3 — Bronze ingest.** An hourly DAG loads the rolling 24-hour measurement window and a raw location snapshot into bronze, then emits one Airflow Asset for the published dataset.
 - ✅ **M4 — dbt foundation and orchestration.** A dbt project types OpenAQ measurement, location, and location-sensor payloads into staging views through an Asset-triggered Cosmos DAG, with the same build running against isolated CI fixtures.
-- ⬜ **M5 — Silver transformations.** Incremental models will normalize staged records, record row-level validity, and enforce tested identity constraints.
+- ✅ **M5 — Silver transformations.** Intermediate models classify every measurement, publish valid records incrementally, retain rejected records for inspection, and expose the latest locations and location-sensor relationships.
 - ⬜ **M6 — Data contracts.** The pipeline will detect breaking upstream schema changes before they reach gold.
 - ⬜ **M7 — Quality gate and gold.** dbt tests will gate publication of the first gold mart.
 - ⬜ **M8 — Backfill and serving.** The historical backfill and a Snowsight dashboard will complete the end-to-end pipeline.
@@ -102,7 +102,7 @@ Key architectural decisions:
 - **Ingest** — one task preserves the raw location discovery response and fetches target-sensor measurements sequentially within the OpenAQ request limit.
 - **Asset emission** — each successful ingest emits one Asset for the location snapshot and measurement window published together in bronze.
 - **Backfill** — date-parameterized loads will support the 2025 backfill in rate-limit-aware chunks.
-- **Data quality** — the WAP gate will publish to gold only after dbt tests pass; invalid source records will remain available for inspection in silver, while data-contract failures will block publication and trigger an alert.
+- **Data quality** — Silver classifies every measurement and retains rejected records with their source payload and rejection reason; the WAP gate will publish to gold only after dbt tests pass, while data-contract failures block publication and trigger an alert.
 - **Secrets** — connections and the OpenAQ key live outside code (`.env` or a Secrets Backend); the repository ships only `.env.example`.
 
 ---
