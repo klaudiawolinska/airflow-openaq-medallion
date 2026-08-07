@@ -6,5 +6,4 @@ Airflow Variable, but DAG-integrity tests parse DAGs without a metadatabase.
 
 import os
 
-
 os.environ["AIRFLOW__COSMOS__ENABLE_CACHE"] = "False"
