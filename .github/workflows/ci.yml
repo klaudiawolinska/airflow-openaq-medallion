@@ -42,3 +42,64 @@ jobs:
         run: docker build -t openaq-airflow:ci .
       - name: Run DAG-integrity tests inside the image
         run: docker run --rm openaq-airflow:ci python -m pytest tests -v
+
+  dbt-build:
+    name: dbt build (isolated Snowflake fixtures)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check CI credentials
+        id: credentials
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_CI_PRIVATE_KEY: ${{ secrets.SNOWFLAKE_CI_PRIVATE_KEY }}
+        run: |
+          if [ -z "$SNOWFLAKE_ACCOUNT" ] || [ -z "$SNOWFLAKE_CI_PRIVATE_KEY" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::dbt build skipped: configure the Snowflake CI credentials documented in include/sql/bootstrap/README.md."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-python@v5
+        if: steps.credentials.outputs.configured == 'true'
+        with:
+          python-version: "3.13"
+      - name: Install dbt
+        if: steps.credentials.outputs.configured == 'true'
+        run: python -m pip install --no-cache-dir -r dbt-requirements.txt
+      - name: Configure the isolated dbt target
+        if: steps.credentials.outputs.configured == 'true'
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_CI_PRIVATE_KEY: ${{ secrets.SNOWFLAKE_CI_PRIVATE_KEY }}
+          SNOWFLAKE_CI_PRIVATE_KEY_PASSPHRASE: ${{ secrets.SNOWFLAKE_CI_PRIVATE_KEY_PASSPHRASE }}
+        run: |
+          profile_dir="$RUNNER_TEMP/openaq-dbt-profile"
+          mkdir -p "$profile_dir"
+          printf '%s' "$SNOWFLAKE_CI_PRIVATE_KEY" > "$profile_dir/openaq_ci_user_rsa.p8"
+          chmod 600 "$profile_dir/openaq_ci_user_rsa.p8"
+          cat > "$profile_dir/profiles.yml" <<'EOF'
+          openaq:
+            target: ci
+            outputs:
+              ci:
+                type: snowflake
+                account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+                user: OPENAQ_CI_USER
+                private_key_path: "{{ env_var('SNOWFLAKE_CI_PRIVATE_KEY_PATH') }}"
+                private_key_passphrase: "{{ env_var('SNOWFLAKE_CI_PRIVATE_KEY_PASSPHRASE', '') }}"
+                database: OPENAQ
+                warehouse: OPENAQ_WH
+                schema: CI
+                role: OPENAQ_CI
+                threads: 4
+          EOF
+          echo "SNOWFLAKE_CI_PRIVATE_KEY_PATH=$profile_dir/openaq_ci_user_rsa.p8" >> "$GITHUB_ENV"
+          echo "DBT_PROFILES_DIR=$profile_dir" >> "$GITHUB_ENV"
+      - name: Seed CI fixtures and build dbt models
+        if: steps.credentials.outputs.configured == 'true'
+        run: |
+          dbt seed --project-dir dbt/openaq --profiles-dir "$DBT_PROFILES_DIR" --target ci --full-refresh
+          dbt build --project-dir dbt/openaq --profiles-dir "$DBT_PROFILES_DIR" --target ci --select path:models --vars '{"source_schema": "CI"}'

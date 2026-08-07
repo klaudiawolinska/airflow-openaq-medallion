@@ -96,6 +96,16 @@ astro dev start
 - **Test the Snowflake connection** – trigger the `_snowflake_smoke` DAG in the Airflow UI. The DAG should complete successfully.
 - **Least-privilege verification (optional)** – run [`../tests/negative_permissions.sql`](../tests/negative_permissions.sql). Every statement in the script is expected to fail, demonstrating that `OPENAQ_PIPELINE` cannot perform actions outside its intended scope.
 
+## CI credentials
+
+GitHub Actions runs `dbt build` against fixtures in `OPENAQ.CI` as `OPENAQ_CI_USER`. After generating the key pair and assigning its public key in `03_users.sql`, add these repository secrets:
+
+- `SNOWFLAKE_ACCOUNT` — the Snowflake organisation-account identifier.
+- `SNOWFLAKE_CI_PRIVATE_KEY` — the PEM content of `openaq_ci_user_rsa.p8`.
+- `SNOWFLAKE_CI_PRIVATE_KEY_PASSPHRASE` — the private-key passphrase if the key is encrypted.
+
+The workflow skips the dbt build and reports a warning until the required account identifier and private key are configured. The CI role can access only `OPENAQ.CI`; it cannot read or modify bronze, silver, or gold.
+
 ## Teardown
 
 `99_teardown.sql` removes all resources created by the bootstrap scripts, including the database (and all data), roles, users, and warehouse.

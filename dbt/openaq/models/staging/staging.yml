@@ -1,0 +1,9 @@
+version: 2
+
+models:
+  - name: stg_measurements
+    description: Typed fields from raw OpenAQ measurement payloads.
+  - name: stg_locations
+    description: Typed fields from raw OpenAQ location snapshots.
+  - name: stg_location_sensors
+    description: Sensors nested in each raw location snapshot, represented as one row per sensor.
