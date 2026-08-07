@@ -26,3 +26,12 @@ def test_staging_models_keep_raw_payloads() -> None:
     assert "raw_measurement" in (models_dir / "stg_measurements.sql").read_text()
     assert "raw_location" in (models_dir / "stg_locations.sql").read_text()
     assert "raw_sensor" in (models_dir / "stg_location_sensors.sql").read_text()
+
+
+def test_ci_fixture_macro_materializes_variant_sources() -> None:
+    from pathlib import Path
+
+    macro = (Path(__file__).resolve().parent.parent / "dbt" / "openaq" / "macros" / "ci" / "prepare_ci_sources.sql").read_text()
+
+    assert "parse_json(raw_measurement)" in macro
+    assert "parse_json(raw_location)" in macro

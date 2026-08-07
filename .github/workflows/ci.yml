@@ -105,4 +105,5 @@ jobs:
           SNOWFLAKE_CI_PRIVATE_KEY_PASSPHRASE: ${{ secrets.SNOWFLAKE_CI_PRIVATE_KEY_PASSPHRASE }}
         run: |
           dbt seed --project-dir dbt/openaq --profiles-dir "$DBT_PROFILES_DIR" --target ci --full-refresh
+          dbt run-operation prepare_ci_sources --project-dir dbt/openaq --profiles-dir "$DBT_PROFILES_DIR" --target ci
           dbt build --project-dir dbt/openaq --profiles-dir "$DBT_PROFILES_DIR" --target ci --select path:models --vars '{"source_schema": "CI"}'
