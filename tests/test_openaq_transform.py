@@ -31,7 +31,13 @@ def test_staging_models_keep_raw_payloads() -> None:
 def test_ci_fixture_macro_materializes_variant_sources() -> None:
     from pathlib import Path
 
-    macro = (Path(__file__).resolve().parent.parent / "dbt" / "openaq" / "macros" / "ci" / "prepare_ci_sources.sql").read_text()
+    project_dir = next(
+        directory
+        for directory in Path(__file__).resolve().parents
+        if (directory / "pyproject.toml").is_file()
+    )
+    macro_path = project_dir / "dbt" / "openaq" / "macros" / "ci" / "prepare_ci_sources.sql"
+    macro = macro_path.read_text()
 
     assert "parse_json(raw_measurement)" in macro
     assert "parse_json(raw_location)" in macro
