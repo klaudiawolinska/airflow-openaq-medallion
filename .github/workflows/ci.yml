@@ -100,6 +100,9 @@ jobs:
           echo "DBT_PROFILES_DIR=$profile_dir" >> "$GITHUB_ENV"
       - name: Seed CI fixtures and build dbt models
         if: steps.credentials.outputs.configured == 'true'
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_CI_PRIVATE_KEY_PASSPHRASE: ${{ secrets.SNOWFLAKE_CI_PRIVATE_KEY_PASSPHRASE }}
         run: |
           dbt seed --project-dir dbt/openaq --profiles-dir "$DBT_PROFILES_DIR" --target ci --full-refresh
           dbt build --project-dir dbt/openaq --profiles-dir "$DBT_PROFILES_DIR" --target ci --select path:models --vars '{"source_schema": "CI"}'
