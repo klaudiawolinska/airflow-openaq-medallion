@@ -3,7 +3,58 @@ version: 2
 models:
   - name: stg_measurements
     description: Typed fields from raw OpenAQ measurement payloads.
+    columns:
+      - name: sensor_id
+        data_tests:
+          - not_null
+      - name: parameter_id
+        data_tests:
+          - not_null
+      - name: measurement_period_from_utc
+        data_tests:
+          - not_null
+      - name: raw_measurement
+        data_tests:
+          - not_null
+      - name: load_id
+        data_tests:
+          - not_null
+      - name: loaded_at
+        data_tests:
+          - not_null
   - name: stg_locations
     description: Typed fields from raw OpenAQ location snapshots.
+    columns:
+      - name: load_id
+        data_tests:
+          - not_null
+      - name: snapshot_at
+        data_tests:
+          - not_null
+      - name: location_id
+        data_tests:
+          - not_null
+      - name: raw_location
+        data_tests:
+          - not_null
   - name: stg_location_sensors
     description: Sensors nested in each raw location snapshot, represented as one row per sensor.
+    columns:
+      - name: load_id
+        data_tests:
+          - not_null
+      - name: snapshot_at
+        data_tests:
+          - not_null
+      - name: location_id
+        data_tests:
+          - not_null
+      - name: sensor_id
+        data_tests:
+          - not_null
+      - name: parameter_id
+        data_tests:
+          - not_null
+      - name: raw_sensor
+        data_tests:
+          - not_null

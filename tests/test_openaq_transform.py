@@ -9,12 +9,14 @@ def test_transform_dag_renders_the_typed_staging_models() -> None:
     assert set(openaq_transform.tags) == {"openaq", "silver", "transform", "dbt"}
 
     rendered_model_tasks = {
-        task.task_id for task in openaq_transform.tasks if task.task_id.startswith("stg_")
+        task.task_id.removesuffix(".run")
+        for task in openaq_transform.tasks
+        if task.task_id.startswith("stg_") and task.task_id.endswith(".run")
     }
     assert rendered_model_tasks == {
-        "stg_location_sensors_run",
-        "stg_locations_run",
-        "stg_measurements_run",
+        "stg_location_sensors",
+        "stg_locations",
+        "stg_measurements",
     }
 
 
@@ -39,5 +41,15 @@ def test_ci_fixture_macro_materializes_variant_sources() -> None:
     macro_path = project_dir / "dbt" / "openaq" / "macros" / "ci" / "prepare_ci_sources.sql"
     macro = macro_path.read_text()
 
-    assert "parse_json(raw_measurement)" in macro
-    assert "parse_json(raw_location)" in macro
+    assert "create or replace table {{ target.database }}.{{ target.schema }}.measurements" in macro
+    assert "from {{ ref('measurements') }}" in macro
+    assert "parse_json(raw_measurement) as raw_measurement" in macro
+    assert "{% do run_query(measurements_sql) %}" in macro
+
+    assert (
+        "create or replace table {{ target.database }}.{{ target.schema }}.location_snapshots"
+        in macro
+    )
+    assert "from {{ ref('location_snapshots') }}" in macro
+    assert "parse_json(raw_location) as raw_location" in macro
+    assert "{% do run_query(locations_sql) %}" in macro
